@@ -1,4 +1,6 @@
 export { toKitInstruction } from "./instruction.js";
+export { inspectConfidentialAccount } from "./inspect.js";
+export type { InspectRpc } from "./inspect.js";
 export {
   sendInstructionPlan,
   submitConfidentialTransfer,

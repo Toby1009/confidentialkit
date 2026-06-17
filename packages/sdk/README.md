@@ -16,30 +16,36 @@ balances — the read/inspect path that powers debugging (the missing
 npm install @confidentialkit/sdk
 ```
 
+> **Network-free.** This package makes **no network calls** — pass it account
+> bytes you already have. To fetch from an RPC, use
+> [`@confidentialkit/kit`](https://www.npmjs.com/package/@confidentialkit/kit)'s
+> `inspectConfidentialAccount`, or your own RPC client + `decodeConfidentialAccount`.
+
 ## Usage
 
-### Inspect an account via RPC
-
-```ts
-import { ConfidentialKit } from "@confidentialkit/sdk";
-
-const kit = new ConfidentialKit({ cluster: "localnet" }); // Surfpool fork
-
-// Inspector mode — raw ciphertexts, no keys needed:
-const raw = await kit.inspect(accountAddress);
-console.log(raw.state.ciphertexts);
-
-// With owner keys — decrypted balances:
-const result = await kit.inspect(accountAddress, { aeKey, elgamalSecret });
-console.log(result.availableBalance, result.pendingBalance);
-```
-
-### Decode account bytes you already have (offline / browser)
+### Decode account bytes (offline / browser)
 
 ```ts
 import { decodeConfidentialAccount } from "@confidentialkit/sdk";
 
-const result = await decodeConfidentialAccount(accountData, { keys: { aeKey } });
+// Inspector mode — raw ciphertexts, no keys needed:
+const raw = await decodeConfidentialAccount(accountData);
+console.log(raw.state.ciphertexts);
+
+// With owner keys — decrypted balances:
+const result = await decodeConfidentialAccount(accountData, { keys: { aeKey, elgamalSecret } });
+console.log(result.availableBalance, result.pendingBalance);
+```
+
+### Fetch + decode via RPC (using @confidentialkit/kit)
+
+```ts
+import { createSolanaRpc } from "@solana/kit";
+import { inspectConfidentialAccount } from "@confidentialkit/kit";
+
+const rpc = createSolanaRpc("http://127.0.0.1:8899");
+const result = await inspectConfidentialAccount(rpc, accountAddress, { aeKey });
+console.log(result.availableBalance);
 ```
 
 ### Decrypt a single ciphertext

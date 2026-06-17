@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
-import type { Cluster, DecryptedConfidentialAccount } from "@confidentialkit/sdk";
-import { buildKeys, inspectOffline, inspectViaRpc } from "./inspector.js";
+import type { DecryptedConfidentialAccount } from "@confidentialkit/sdk";
+import { buildKeys, inspectOffline, inspectViaRpc, type Cluster } from "./inspector.js";
 import { toReport, type Report } from "./format.js";
 
 type Mode = "rpc" | "offline";

@@ -12,6 +12,9 @@ npm install @confidentialkit/kit @confidentialkit/sdk @solana/kit
 
 ## What's here
 
+- **`inspectConfidentialAccount(rpc, account, keys?)`** — fetch a confidential
+  account via `@solana/kit` and decode/decrypt it (the network counterpart to the
+  core SDK's offline `decodeConfidentialAccount`; the SDK itself stays network-free).
 - **`toKitInstruction(descriptor, signers?)`** — convert an `InstructionDescriptor`
   to a kit instruction, attaching `TransactionSigner`s to signer-role accounts.
 - **`sendInstructionPlan({ rpc, rpcSubscriptions, feePayer, signers, plan })`** —

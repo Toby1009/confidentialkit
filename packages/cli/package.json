@@ -1,6 +1,6 @@
 {
   "name": "@confidentialkit/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI for inspecting and decrypting Solana Token-2022 Confidential Balances.",
   "license": "MIT",
   "type": "module",

@@ -1,8 +1,5 @@
-// Client facade
-export { ConfidentialKit } from "./client.js";
-export type { Cluster, ConfidentialKitConfig } from "./client.js";
-
-// High-level decode
+// High-level decode (offline — pass account bytes; fetch them with your own RPC
+// client, or @confidentialkit/kit's `inspectConfidentialAccount`).
 export { decodeConfidentialAccount } from "./decode.js";
 export type { DecodeOptions, DecryptKeys } from "./decode.js";
 
@@ -78,9 +75,6 @@ export type {
   InstructionAccount,
   AccountRole,
 } from "./instructions/types.js";
-
-// RPC
-export { fetchAccountData } from "./rpc.js";
 
 // WASM control (browser hosts inject their own build)
 export { setZkModule, getZk } from "./wasm.js";

@@ -1,6 +1,6 @@
 {
   "name": "@confidentialkit/kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "@solana/kit adapter for ConfidentialKit — submit confidential-transfer instruction plans.",
   "license": "MIT",
   "type": "module",

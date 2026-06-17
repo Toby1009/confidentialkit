@@ -1,0 +1,7 @@
+# https://docs.socket.dev/docs/socket-yml
+version: 2
+issueRules:
+  # @confidentialkit/kit and the CLI legitimately make network calls (Solana RPC
+  # reads + transaction submission). The core @confidentialkit/sdk is network-free.
+  # `false` suppresses the alert for this (expected) capability.
+  networkAccess: false

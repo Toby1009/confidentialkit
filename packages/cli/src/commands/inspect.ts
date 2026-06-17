@@ -1,10 +1,6 @@
 import { Command } from "commander";
-import {
-  ConfidentialKit,
-  base64ToBytes,
-  decodeConfidentialAccount,
-  type Cluster,
-} from "@confidentialkit/sdk";
+import { ConfidentialKitError, base64ToBytes, decodeConfidentialAccount } from "@confidentialkit/sdk";
+import { fetchAccountData, resolveRpcUrl, type Cluster } from "../rpc.js";
 import { formatAccount, jsonReplacer, readAccountFile, resolveBytes } from "../util.js";
 
 interface InspectOptions {
@@ -71,6 +67,7 @@ async function inspectViaRpc(
   if (!account) {
     throw new Error("an <account> address is required unless --account-data/--account-file is given");
   }
-  const kit = new ConfidentialKit({ cluster: opts.cluster, rpcUrl: opts.url });
-  return kit.inspect(account, keys);
+  const data = await fetchAccountData(resolveRpcUrl(opts.cluster, opts.url), account);
+  if (!data) throw new ConfidentialKitError(`Account ${account} not found on ${opts.cluster}`);
+  return decodeConfidentialAccount(data, { account, keys });
 }
