@@ -1,53 +1,55 @@
-import type { Address, ConfidentialBalanceState } from "./types.js";
-import { createUnimplementedProver, type Prover } from "./proofs/index.js";
-import {
-  createUnimplementedElGamalProvider,
-  type ElGamalProvider,
-} from "./crypto/elgamal.js";
+import { ConfidentialKitError } from "./errors.js";
+import { decodeConfidentialAccount, type DecryptKeys } from "./decode.js";
+import { fetchAccountData } from "./rpc.js";
+import type { Address, DecryptedConfidentialAccount } from "./types.js";
 
 /** Known cluster monikers; `localnet` is the Surfpool mainnet-fork target. */
 export type Cluster = "localnet" | "devnet" | "mainnet-beta";
 
+const DEFAULT_RPC_URLS: Record<Cluster, string> = {
+  localnet: "http://127.0.0.1:8899",
+  devnet: "https://api.devnet.solana.com",
+  "mainnet-beta": "https://api.mainnet-beta.solana.com",
+};
+
 export interface ConfidentialKitConfig {
-  /** RPC endpoint. Defaults to a local Surfpool fork on 8899. */
+  /** RPC endpoint. Defaults to the cluster's well-known URL. */
   readonly rpcUrl?: string;
+  /** Defaults to `localnet` (the Surfpool fork). */
   readonly cluster?: Cluster;
-  /** Override the proof backend (e.g. inject the WASM prover). */
-  readonly prover?: Prover;
-  /** Override the ElGamal crypto backend. */
-  readonly elgamal?: ElGamalProvider;
+  /** Inject a custom `fetch` (for tests or custom transports). */
+  readonly fetch?: typeof fetch;
 }
 
 /**
- * Top-level entry point. Construct once, then drive the lifecycle or inspect
- * confidential account state.
+ * Thin client facade: fetch a confidential account from RPC and decode it.
  *
  *   const kit = new ConfidentialKit({ cluster: "localnet" });
- *   const state = await kit.inspect(account, { secretKey });
+ *   const result = await kit.inspect(account, { aeKey });
+ *   console.log(result.availableBalance);
  */
 export class ConfidentialKit {
   readonly rpcUrl: string;
   readonly cluster: Cluster;
-  readonly prover: Prover;
-  readonly elgamal: ElGamalProvider;
+  readonly #fetch: typeof fetch;
 
   constructor(config: ConfidentialKitConfig = {}) {
     this.cluster = config.cluster ?? "localnet";
-    this.rpcUrl = config.rpcUrl ?? "http://127.0.0.1:8899";
-    this.prover = config.prover ?? createUnimplementedProver();
-    this.elgamal = config.elgamal ?? createUnimplementedElGamalProvider();
+    this.rpcUrl = config.rpcUrl ?? DEFAULT_RPC_URLS[this.cluster];
+    this.#fetch = config.fetch ?? fetch;
   }
 
   /**
-   * Fetch and (optionally) decrypt a confidential-balances account. With no key,
-   * returns raw ciphertexts only — this is the inspector / debugging path.
+   * Fetch and decode a confidential-balances account. With no keys, returns the
+   * raw parsed state (inspector mode); with keys, decrypts the balances.
    *
-   * Implemented in Week 2/3; wired to RPC + the ElGamal provider.
+   * @throws ConfidentialKitError if the account does not exist.
    */
-  async inspect(
-    _account: Address,
-    _keys?: { secretKey?: Uint8Array; aeKey?: Uint8Array },
-  ): Promise<ConfidentialBalanceState> {
-    throw new Error("ConfidentialKit.inspect() not implemented yet (Week 2/3).");
+  async inspect(account: Address, keys?: DecryptKeys): Promise<DecryptedConfidentialAccount> {
+    const data = await fetchAccountData(this.rpcUrl, account, this.#fetch);
+    if (!data) {
+      throw new ConfidentialKitError(`Account ${account} not found on ${this.cluster}`);
+    }
+    return decodeConfidentialAccount(data, { account, keys });
   }
 }

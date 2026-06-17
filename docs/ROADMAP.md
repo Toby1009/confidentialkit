@@ -6,13 +6,20 @@ that this builder is uniquely positioned to fill, and it neutralizes the privacy
 "liveness" problem (proof program disabled on mainnet/devnet) by developing and
 demoing against a local Surfpool mainnet-fork.
 
-## Week 1 — Reproduce the flow (de-risk gate)
+## Done so far (read path)
+- [x] Wire `@solana/zk-sdk` WASM (`src/wasm.ts`, lazy + browser-overridable).
+- [x] ElGamal + AES decryption over the audited WASM (`src/crypto/decrypt.ts`).
+- [x] Key derivation from wallet signatures/seeds (`src/crypto/keys.ts`).
+- [x] Token-2022 TLV + ConfidentialTransferAccount parser (`src/state/`).
+- [x] High-level `decodeConfidentialAccount` + `ConfidentialKit.inspect` (RPC).
+- [x] CLI `inspect` + `decrypt` (solves token-2022#145).
+- [x] 44 tests across SDK + CLI against the real WASM; CI green.
+
+## Week 1 — Reproduce the transfer flow (de-risk gate)
 - [ ] Stand up a Surfpool mainnet-fork with Token-2022 cloned (`pnpm fork:up`).
 - [ ] Reproduce the full confidential-transfer flow end-to-end in a script
       (deposit → apply-pending → transfer with 3 proofs → apply → withdraw).
-- [ ] Wire `@solana/zk-sdk` WASM proof generation in `packages/sdk/src/proofs`.
-- [ ] Implement the ElGamal provider in `packages/sdk/src/crypto/elgamal.ts`.
-- [ ] Lock scope; public repo with CI (done — this scaffold).
+- [ ] Wire `@solana/zk-sdk` proof-data generation (range / validity / equality).
 
 > **Kill/Pivot gate:** if you cannot reproduce the confidential flow on the local
 > fork by end of Week 1, pivot to the runner-up: Light Protocol ZK-compression

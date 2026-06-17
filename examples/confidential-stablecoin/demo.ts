@@ -1,39 +1,47 @@
 /**
- * Worked example: a confidential stablecoin transfer against a local Surfpool
- * mainnet-fork. Run `pnpm fork:up` in another terminal first.
+ * Worked example: inspect a confidential stablecoin account against a local
+ * Surfpool mainnet-fork. Run `pnpm fork:up` in another terminal first, then:
  *
- * This is the end-to-end "happy path" the SDK is designed to make trivial.
- * The lifecycle calls throw until Week 2 — this file is the target API shape,
- * doubling as living documentation of the intended ergonomics.
+ *   pnpm --filter @confidentialkit/example-confidential-stablecoin demo
+ *
+ * This demonstrates the read path (parse + decrypt), which works today even
+ * though confidential *transfers* are gated on the ZK ElGamal program being
+ * re-enabled on a live cluster.
  */
-import { ConfidentialKit } from "@confidentialkit/sdk";
+import {
+  ConfidentialKit,
+  bytesToHex,
+  elgamalSignerMessage,
+  type DecryptKeys,
+} from "@confidentialkit/sdk";
+
+// Replace with a real confidential token account on your fork.
+const ACCOUNT = process.env.CK_ACCOUNT ?? "<sender-token-account>";
 
 async function main(): Promise<void> {
-  const kit = new ConfidentialKit({
-    cluster: "localnet",
-    rpcUrl: "http://127.0.0.1:8899",
-  });
+  const kit = new ConfidentialKit({ cluster: "localnet" });
 
-  // A USD-pegged confidential stablecoin mint cloned onto the fork.
-  const mint = "<confidential-stablecoin-mint>";
-  const senderAccount = "<sender-token-account>";
+  // In a real app the owner signs `signerMessage` with their wallet and feeds
+  // the signature to `deriveElGamalSecretFromSignature` / `deriveAeKeyFromSignature`.
+  const accountAddressBytes = new Uint8Array(32); // = bs58.decode(ACCOUNT)
+  const message = await elgamalSignerMessage(accountAddressBytes);
+  console.log("Owner must sign this message to derive their ElGamal key:");
+  console.log(`  ${bytesToHex(message)}\n`);
 
-  console.log("Inspecting sender confidential balance (raw, no key)...");
-  const state = await kit.inspect(senderAccount).catch((e: Error) => {
-    console.log(`  (not wired yet) ${e.message}`);
-    return undefined;
-  });
-  if (state) console.log(state);
+  // Inspector mode (no keys) — always works, shows raw ciphertexts.
+  if (ACCOUNT.startsWith("<")) {
+    console.log("Set CK_ACCOUNT to a real account to fetch live state.");
+    return;
+  }
 
-  // Intended Week-2 API:
-  //   await kit lifecycle.configureAccount({ account, mint, auditorPublicKey });
-  //   await kit lifecycle.deposit({ account, mint, amount: 1_000_000n });
-  //   await kit lifecycle.applyPending({ account, mint });
-  //   await kit lifecycle.transfer({
-  //     account, mint, amount: 250_000n,
-  //     destination, destinationPublicKey, auditorPublicKey,
-  //   });
-  console.log("\nTarget API documented in this file; lifecycle lands in Week 2.");
+  const keys: DecryptKeys = {
+    // aeKey: <16 bytes derived from the owner's signature>,
+    // elgamalSecret: <32 bytes derived from the owner's signature>,
+  };
+  const result = await kit.inspect(ACCOUNT, keys);
+  console.log(`mint:      ${result.state.mint}`);
+  console.log(`available: ${result.availableBalance ?? "<supply --ae-key>"}`);
+  console.log(`pending:   ${result.pendingBalance ?? "<supply --elgamal-secret>"}`);
 }
 
 main().catch((err) => {

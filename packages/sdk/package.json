@@ -13,7 +13,10 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -21,8 +24,19 @@
     "test": "vitest run",
     "clean": "rm -rf dist"
   },
-  "keywords": ["solana", "token-2022", "confidential-transfer", "zk", "elgamal", "privacy"],
+  "keywords": [
+    "solana",
+    "token-2022",
+    "confidential-transfer",
+    "zk",
+    "elgamal",
+    "privacy"
+  ],
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@solana/zk-sdk": "0.4.2",
+    "bs58": "^6.0.0"
   }
 }

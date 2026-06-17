@@ -1,50 +1,76 @@
 import { Command } from "commander";
-import { ConfidentialKit } from "@confidentialkit/sdk";
+import {
+  ConfidentialKit,
+  base64ToBytes,
+  decodeConfidentialAccount,
+  type Cluster,
+} from "@confidentialkit/sdk";
+import { formatAccount, jsonReplacer, readAccountFile, resolveBytes } from "../util.js";
+
+interface InspectOptions {
+  url?: string;
+  cluster: Cluster;
+  aeKey?: string;
+  aeKeyFile?: string;
+  elgamalSecret?: string;
+  elgamalSecretFile?: string;
+  accountData?: string;
+  accountFile?: string;
+  json: boolean;
+}
 
 /**
- * `confidentialkit inspect <account>` — fetch a confidential-balances account and
- * print its state. Without a key, shows raw ciphertexts (the debugging path);
- * with `--secret-key`, decrypts to human-readable balances. Solves the
- * "raw encrypted bytes" problem from token-2022#145.
+ * `confidentialkit inspect <account>` — fetch (or load) a confidential-balances
+ * account and print its state. Without keys it shows raw ciphertexts (the
+ * debugging path for token-2022#145); with keys it decrypts the balances.
  */
 export function inspectCommand(): Command {
   return new Command("inspect")
     .description("Inspect a Token-2022 confidential-balances account")
-    .argument("<account>", "Base58 token-account address")
-    .option("-u, --url <rpc>", "RPC endpoint", "http://127.0.0.1:8899")
+    .argument("[account]", "Base58 token-account address (omit when using --account-*)")
+    .option("-u, --url <rpc>", "RPC endpoint (overrides --cluster default)")
     .option("--cluster <cluster>", "localnet | devnet | mainnet-beta", "localnet")
-    .option("--secret-key <hex>", "ElGamal secret key (hex) to decrypt balances")
-    .option("--json", "Emit JSON instead of a formatted table", false)
-    .action(async (account: string, opts) => {
-      const kit = new ConfidentialKit({ rpcUrl: opts.url, cluster: opts.cluster });
-      const keys = opts.secretKey
-        ? { secretKey: hexToBytes(opts.secretKey) }
-        : undefined;
-      const state = await kit.inspect(account, keys);
-      if (opts.json) {
-        process.stdout.write(JSON.stringify(state, jsonReplacer, 2) + "\n");
-      } else {
-        printState(state);
-      }
+    .option("--ae-key <hex>", "AES key (hex) to decrypt the available balance")
+    .option("--ae-key-file <path>", "read the AES key (hex) from a file")
+    .option("--elgamal-secret <hex>", "ElGamal secret key (hex) to decrypt the pending balance")
+    .option("--elgamal-secret-file <path>", "read the ElGamal secret (hex) from a file")
+    .option("--account-data <base64>", "decode inline account data instead of fetching (offline)")
+    .option("--account-file <path>", "read raw account bytes from a binary file (offline)")
+    .option("--json", "emit JSON instead of a formatted report", false)
+    .action(async (account: string | undefined, opts: InspectOptions) => {
+      const keys = {
+        aeKey: opts.aeKey || opts.aeKeyFile
+          ? resolveBytes("ae-key", opts.aeKey, opts.aeKeyFile, "hex")
+          : undefined,
+        elgamalSecret: opts.elgamalSecret || opts.elgamalSecretFile
+          ? resolveBytes("elgamal-secret", opts.elgamalSecret, opts.elgamalSecretFile, "hex")
+          : undefined,
+      };
+
+      const offlineData = opts.accountData
+        ? base64ToBytes(opts.accountData)
+        : opts.accountFile
+          ? readAccountFile(opts.accountFile)
+          : undefined;
+
+      const result = offlineData
+        ? await decodeConfidentialAccount(offlineData, { account, keys })
+        : await inspectViaRpc(account, opts, keys);
+
+      process.stdout.write(
+        (opts.json ? JSON.stringify(result, jsonReplacer, 2) : formatAccount(result)) + "\n",
+      );
     });
 }
 
-function hexToBytes(hex: string): Uint8Array {
-  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(clean.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+async function inspectViaRpc(
+  account: string | undefined,
+  opts: InspectOptions,
+  keys: { aeKey?: Uint8Array; elgamalSecret?: Uint8Array },
+) {
+  if (!account) {
+    throw new Error("an <account> address is required unless --account-data/--account-file is given");
   }
-  return bytes;
-}
-
-function jsonReplacer(_key: string, value: unknown): unknown {
-  if (typeof value === "bigint") return value.toString();
-  if (value instanceof Uint8Array) return Buffer.from(value).toString("hex");
-  return value;
-}
-
-function printState(state: unknown): void {
-  // Real formatter lands in Week 3 (table of available/pending + raw ciphertexts).
-  process.stdout.write(JSON.stringify(state, jsonReplacer, 2) + "\n");
+  const kit = new ConfidentialKit({ cluster: opts.cluster, rpcUrl: opts.url });
+  return kit.inspect(account, keys);
 }

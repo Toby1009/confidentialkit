@@ -7,20 +7,34 @@
   "bin": {
     "confidentialkit": "./dist/index.js"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "clean": "rm -rf dist"
   },
   "dependencies": {
     "@confidentialkit/sdk": "workspace:*",
     "commander": "^12.1.0"
   },
-  "keywords": ["solana", "token-2022", "confidential-transfer", "cli", "decrypt"],
+  "keywords": [
+    "solana",
+    "token-2022",
+    "confidential-transfer",
+    "cli",
+    "decrypt"
+  ],
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@solana/zk-sdk": "0.4.2",
+    "tsx": "^4.22.4",
+    "vitest": "^2.1.9"
   }
 }

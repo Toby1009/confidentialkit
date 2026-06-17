@@ -1,9 +1,8 @@
 /**
  * Core domain types for ConfidentialKit.
  *
- * These are deliberately framework-agnostic (base58 strings + Uint8Array) so the
- * SDK can adapt to either `@solana/kit` or `@solana/web3.js` at the edges without
- * leaking either dependency into the public type surface.
+ * Addresses are base58 strings; ciphertexts and keys are raw `Uint8Array`. This
+ * keeps the public surface free of any particular Solana client library.
  */
 
 /** Base58-encoded Solana address (account, mint, program, owner). */
@@ -13,56 +12,76 @@ export type Address = string;
 export type Signature = string;
 
 /**
- * The Token-2022 Confidential Transfer extension splits a balance into a
- * `pending` bucket (incoming transfers land here, un-spendable until applied) and
- * an `available` bucket (spendable). Both are stored on-chain as ElGamal
- * ciphertexts; the raw account exposes only Pedersen commitments + ciphertexts.
+ * The raw ciphertext fields of the Token-2022 `ConfidentialTransferAccount`
+ * extension, exactly as stored on-chain. Always parseable without any key —
+ * this is the "inspector" view that powers debugging (token-2022#145).
+ *
+ * Balances are split into a `pending` bucket (incoming transfers land here,
+ * un-spendable until applied) and an `available` bucket (spendable). The
+ * available balance is duplicated as an AES "decryptable" ciphertext that the
+ * owner can read instantly without a discrete-log search.
  */
-export interface ConfidentialBalanceState {
-  readonly account: Address;
+export interface ConfidentialAccountState {
+  /** The token-account address, if it was supplied to the parser. */
+  readonly account?: Address;
+  /** The mint, parsed from the base token-account data. */
   readonly mint: Address;
-  /** Decrypted available balance, base units. Present only when a key was supplied. */
-  readonly availableBalance?: bigint;
-  /** Decrypted pending balance, base units. Present only when a key was supplied. */
-  readonly pendingBalance?: bigint;
-  /** Number of pending credits not yet applied (the on-chain counter). */
-  readonly pendingCreditCounter: number;
-  /** True when the available-balance ciphertext failed to decrypt with the given key. */
-  readonly decryptFailed: boolean;
-  /** Raw ciphertext blobs, always present, for the inspector / debugging. */
-  readonly raw: ConfidentialBalanceCiphertexts;
+  /** The account's ElGamal public key (32 bytes). */
+  readonly elgamalPubkey: Uint8Array;
+  /** Whether the account has been approved for confidential transfers. */
+  readonly approved: boolean;
+  readonly allowConfidentialCredits: boolean;
+  readonly allowNonConfidentialCredits: boolean;
+  /** On-chain counter of pending credits not yet applied. */
+  readonly pendingBalanceCreditCounter: bigint;
+  readonly maximumPendingBalanceCreditCounter: bigint;
+  readonly expectedPendingBalanceCreditCounter: bigint;
+  readonly actualPendingBalanceCreditCounter: bigint;
+  /** Raw ciphertext blobs, always present. */
+  readonly ciphertexts: ConfidentialCiphertexts;
 }
 
-export interface ConfidentialBalanceCiphertexts {
-  readonly availableBalance: Uint8Array;
+/** Raw ElGamal / AES ciphertext blobs from the extension. */
+export interface ConfidentialCiphertexts {
+  /** ElGamal ciphertext, low 16 bits of the pending balance (64 bytes). */
   readonly pendingBalanceLo: Uint8Array;
+  /** ElGamal ciphertext, bits [16,48) of the pending balance (64 bytes). */
   readonly pendingBalanceHi: Uint8Array;
+  /** ElGamal ciphertext of the available balance (64 bytes). */
+  readonly availableBalance: Uint8Array;
+  /** AES "decryptable available balance" — the owner's fast-path read (36 bytes). */
   readonly decryptableAvailableBalance: Uint8Array;
 }
 
 /**
- * An ElGamal keypair used to encrypt/decrypt confidential balances. The public
- * key is committed on-chain when the account is configured; the secret key never
- * leaves the client.
+ * A {@link ConfidentialAccountState} with balances decrypted, produced when keys
+ * are supplied. The raw `state` is preserved so callers keep access to the
+ * ciphertexts.
  */
-export interface ElGamalKeypair {
-  readonly publicKey: Uint8Array;
-  readonly secretKey: Uint8Array;
+export interface DecryptedConfidentialAccount {
+  readonly state: ConfidentialAccountState;
+  /**
+   * Spendable balance, base units. Read from the AES decryptable ciphertext
+   * (requires the AE key). `undefined` if no AE key was supplied.
+   */
+  readonly availableBalance?: bigint;
+  /**
+   * Pending (un-applied) balance, base units. Reconstructed from the lo/hi
+   * ElGamal ciphertexts (requires the ElGamal secret key). `undefined` if no
+   * ElGamal key was supplied.
+   */
+  readonly pendingBalance?: bigint;
+  /** True when a supplied key failed to decrypt its ciphertext. */
+  readonly decryptFailed: boolean;
 }
 
-/** AES key used for the "decryptable available balance" fast path. */
-export type AeKey = Uint8Array;
-
-/** The three proof families a confidential transfer requires. */
-export type ProofKind = "ciphertext-validity" | "equality" | "range";
-
-/**
- * A generated zero-knowledge proof plus the context-state account it must be
- * written to. Confidential-transfer proofs exceed Solana's 1232-byte transaction
- * limit, so they are uploaded to context-state accounts across sequential
- * transactions rather than inlined.
- */
-export interface GeneratedProof {
-  readonly kind: ProofKind;
-  readonly data: Uint8Array;
-}
+/** Byte length of an ElGamal ciphertext (commitment ‖ handle). */
+export const ELGAMAL_CIPHERTEXT_LEN = 64;
+/** Byte length of an ElGamal public key. */
+export const ELGAMAL_PUBKEY_LEN = 32;
+/** Byte length of an ElGamal secret key. */
+export const ELGAMAL_SECRET_LEN = 32;
+/** Byte length of an AES "decryptable balance" ciphertext. */
+export const AE_CIPHERTEXT_LEN = 36;
+/** Byte length of an AES key. */
+export const AE_KEY_LEN = 16;

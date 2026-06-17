@@ -12,8 +12,11 @@ generation), is **compliance-first** (auditor keys / selective disclosure), and 
 
 ## Status
 
-🚧 **Pre-alpha / `0.0.x`.** This repo is scaffolding toward a 4-week MVP. See
-[`docs/ROADMAP.md`](docs/ROADMAP.md).
+🟢 **`0.0.x` — read path implemented and tested.** Account parsing, balance
+decryption, key derivation, the CLI (`inspect`/`decrypt`) and an RPC client are
+working and covered by tests (44 across SDK + CLI, exercising the real
+`@solana/zk-sdk` WASM). On-chain transfer construction is gated on the proof
+program re-enabling — see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 > ⚠️ **Liveness note.** Solana's native ZK ElGamal Proof program
 > (`ZkE1Gama1Proof11111111111111111111111111111`) has been **disabled on mainnet
@@ -26,11 +29,12 @@ generation), is **compliance-first** (auditor keys / selective disclosure), and 
 
 ## What's in the box
 
-| Package | What it does |
-| --- | --- |
-| [`@confidentialkit/sdk`](packages/sdk) | Ergonomic TypeScript SDK wrapping `@solana/zk-sdk` for the full confidential-balances lifecycle (configure → deposit → apply-pending → transfer → withdraw), with proof-splitting handled internally. |
-| [`@confidentialkit/cli`](packages/cli) | `confidentialkit decrypt` + account-state inspector — solves [token-2022#145](https://github.com/solana-program/token-2022/issues/145): turns raw Pedersen commitments / ElGamal ciphertexts into human-readable balances. |
-| [`apps/inspector`](apps/inspector) | Lightweight web "ciphertext inspector" — decode confidential account state in-browser via WASM. |
+| Package | What it does | State |
+| --- | --- | --- |
+| [`@confidentialkit/sdk`](packages/sdk) | Parse Token-2022 confidential accounts, decrypt available (AES) + pending (ElGamal) balances, derive keys from wallet signatures, and fetch via RPC — all over the audited `@solana/zk-sdk` WASM. | ✅ implemented + tested |
+| [`@confidentialkit/cli`](packages/cli) | `confidentialkit inspect` + `decrypt` — solves [token-2022#145](https://github.com/solana-program/token-2022/issues/145): turns raw ElGamal/AES ciphertexts into human-readable balances. | ✅ implemented + tested |
+| [`apps/inspector`](apps/inspector) | Lightweight web "ciphertext inspector" — decode confidential account state in-browser via WASM. | 🚧 Week 4 |
+| confidential transfer lifecycle (configure → deposit → apply → transfer → withdraw) | Proof generation + transaction construction. | ⏳ gated on ZK ElGamal re-enablement |
 
 ## Why this exists
 
