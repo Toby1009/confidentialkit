@@ -60,9 +60,13 @@ fills it.
 pnpm install
 pnpm build
 
-# Stand up a local mainnet-fork with Token-2022 cloned and reproduce the flow:
-pnpm fork:up        # see scripts/surfpool-fork.sh
-pnpm tsx examples/confidential-stablecoin/demo.ts
+# Run the end-to-end pipeline demo (self-contained, no validator needed):
+#   keys → proof generation → verification → recipient/auditor decryption →
+#   transaction-plan construction
+pnpm --filter @confidentialkit/example-confidential-stablecoin demo
+
+# Or reproduce the full on-chain flow against a local mainnet-fork:
+pnpm fork:up        # see scripts/repro-confidential-flow.sh
 ```
 
 ## Repo layout

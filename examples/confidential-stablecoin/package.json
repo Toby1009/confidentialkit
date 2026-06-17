@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@confidentialkit/sdk": "workspace:*"
+    "@confidentialkit/sdk": "workspace:*",
+    "@solana/zk-sdk": "0.4.2"
   },
   "devDependencies": {
     "tsx": "^4.19.2"
