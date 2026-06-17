@@ -32,6 +32,7 @@ export {
   generatePubkeyValidityProof,
   generateZeroBalanceProof,
   generateWithdrawProofs,
+  generateTransferProofs,
   verifyProof,
 } from "./proofs/index.js";
 export type {
@@ -39,10 +40,12 @@ export type {
   ProofKind,
   WithdrawProofs,
   WithdrawProofParams,
+  TransferProofs,
+  TransferProofParams,
 } from "./proofs/index.js";
 
 // Homomorphic ciphertext arithmetic
-export { subtractAmount, addAmount } from "./crypto/ciphertext-math.js";
+export { subtractAmount, addAmount, subtractTransferAmount } from "./crypto/ciphertext-math.js";
 
 // RPC
 export { fetchAccountData } from "./rpc.js";

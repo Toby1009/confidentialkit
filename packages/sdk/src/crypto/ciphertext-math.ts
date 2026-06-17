@@ -19,13 +19,18 @@ const Point = ristretto255.Point;
  * we do not implement the curve.
  */
 
-function commitmentPoint(ciphertext: Uint8Array): InstanceType<typeof Point> {
+function pointAt(bytes: Uint8Array, offset: number): InstanceType<typeof Point> {
   try {
-    return Point.fromBytes(ciphertext.subarray(0, 32));
-  } catch (cause) {
-    throw new InvalidInputError("ElGamal ciphertext", "commitment is not a valid ristretto point");
+    return Point.fromBytes(bytes.subarray(offset, offset + 32));
+  } catch {
+    throw new InvalidInputError("ciphertext", "contains an invalid ristretto point");
   }
 }
+
+const commitmentPoint = (ciphertext: Uint8Array) => pointAt(ciphertext, 0);
+
+/** Low 16 bits of a transfer amount go in the `lo` component; the next bits in `hi`. */
+const TRANSFER_AMOUNT_LO_BITS = 16n;
 
 function withCommitment(ciphertext: Uint8Array, newCommitment: InstanceType<typeof Point>): Uint8Array {
   const out = new Uint8Array(ELGAMAL_CIPHERTEXT_LEN);
@@ -50,4 +55,34 @@ export function addAmount(ciphertext: Uint8Array, amount: bigint): Uint8Array {
   const c = commitmentPoint(ciphertext);
   const newC = amount === 0n ? c : c.add(Point.BASE.multiply(amount));
   return withCommitment(ciphertext, newC);
+}
+
+const GROUPED_3_HANDLES_LEN = 128; // commitment ‖ 3 decrypt handles
+
+/**
+ * Derive the source's new available-balance ciphertext for a confidential
+ * transfer: `current − (sourceLo + sourceHi·2^16)`, where each `source*` is the
+ * source's own ElGamal component (commitment ‖ handle index 0) of the grouped
+ * 3-handle transfer-amount ciphertext. This matches what the Token-2022 program
+ * recomputes on-chain, so the resulting ciphertext is the one the equality proof
+ * must certify.
+ */
+export function subtractTransferAmount(
+  currentAvailable: Uint8Array,
+  groupedLo: Uint8Array,
+  groupedHi: Uint8Array,
+): Uint8Array {
+  assertByteLength(currentAvailable, ELGAMAL_CIPHERTEXT_LEN, "available ciphertext");
+  assertByteLength(groupedLo, GROUPED_3_HANDLES_LEN, "grouped lo ciphertext");
+  assertByteLength(groupedHi, GROUPED_3_HANDLES_LEN, "grouped hi ciphertext");
+
+  const shift = 1n << TRANSFER_AMOUNT_LO_BITS;
+  // Source ElGamal component = (commitment @0, source handle @32).
+  const combinedCommitment = pointAt(groupedLo, 0).add(pointAt(groupedHi, 0).multiply(shift));
+  const combinedHandle = pointAt(groupedLo, 32).add(pointAt(groupedHi, 32).multiply(shift));
+
+  const out = new Uint8Array(ELGAMAL_CIPHERTEXT_LEN);
+  out.set(pointAt(currentAvailable, 0).subtract(combinedCommitment).toBytes(), 0);
+  out.set(pointAt(currentAvailable, 32).subtract(combinedHandle).toBytes(), 32);
+  return out;
 }
