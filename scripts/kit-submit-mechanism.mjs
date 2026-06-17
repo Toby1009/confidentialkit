@@ -51,10 +51,14 @@ const signatures = await sendInstructionPlan({
 });
 console.log(`Landed ${signatures.length} transactions.`);
 
-const exists = (await rpc.getAccountInfo(a1.address).send()).value !== null;
+const [info1, info2] = await Promise.all([
+  rpc.getAccountInfo(a1.address).send(),
+  rpc.getAccountInfo(a2.address).send(),
+]);
+const ok = signatures.length === 2 && info1.value !== null && info2.value !== null;
 console.log(
-  exists
-    ? "✅ kit submission mechanism works — accounts created + confirmed on-chain."
-    : "❌ account missing after submission",
+  ok
+    ? "✅ kit submission mechanism works — both accounts created + confirmed on-chain."
+    : "❌ submission incomplete (missing signatures or accounts)",
 );
-process.exit(exists ? 0 : 1);
+process.exit(ok ? 0 : 1);
