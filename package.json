@@ -14,7 +14,8 @@
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r typecheck",
     "fork:up": "bash scripts/surfpool-fork.sh",
-    "clean": "pnpm -r clean && rm -rf node_modules"
+    "clean": "pnpm -r clean && rm -rf node_modules",
+    "release": "pnpm -r --filter \"./packages/*\" build && pnpm -r --filter \"./packages/*\" publish --access public --no-git-checks"
   },
   "devDependencies": {
     "@confidentialkit/kit": "workspace:*",

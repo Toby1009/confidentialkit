@@ -1,6 +1,6 @@
 {
   "name": "@confidentialkit/cli",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "CLI for inspecting and decrypting Solana Token-2022 Confidential Balances.",
   "license": "MIT",
   "type": "module",
@@ -36,5 +36,17 @@
     "@solana/zk-sdk": "0.4.2",
     "tsx": "^4.22.4",
     "vitest": "^2.1.9"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Toby1009/confidentialkit.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/Toby1009/confidentialkit/tree/main/packages/cli#readme",
+  "bugs": {
+    "url": "https://github.com/Toby1009/confidentialkit/issues"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

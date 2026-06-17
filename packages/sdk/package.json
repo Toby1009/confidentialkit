@@ -1,6 +1,6 @@
 {
   "name": "@confidentialkit/sdk",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Ergonomic TypeScript SDK for Solana Token-2022 Confidential Balances.",
   "license": "MIT",
   "type": "module",
@@ -39,5 +39,18 @@
     "@noble/curves": "^2.2.0",
     "@solana/zk-sdk": "0.4.2",
     "bs58": "^6.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Toby1009/confidentialkit.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/Toby1009/confidentialkit/tree/main/packages/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/Toby1009/confidentialkit/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false
 }
