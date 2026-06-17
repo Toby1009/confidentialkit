@@ -66,9 +66,14 @@ demoing against a local Surfpool mainnet-fork.
       → close), with `System.CreateAccount` encoding + captured context-state
       sizes (`CONTEXT_STATE_ACCOUNT_SIZE`). Pure/testable; the caller wires rent +
       signers + submission via `@solana/kit`.
-- [ ] Thin `@solana/kit` submission wrapper (generate ephemeral context-state
-      signers, fetch rent, sign + send the plan). Live landing still gated on the
-      WASM↔on-chain proof version skew above.
+- [x] **`@solana/kit` submission wrapper** (`@confidentialkit/kit`):
+      `toKitInstruction` adapter, `sendInstructionPlan` (sign/send/confirm a plan
+      tx-by-tx), and `submitConfidentialTransfer` (ephemeral context-state signers
+      + rent + plan + submit). The submission **mechanism is validated end-to-end
+      on the fork** (`scripts/kit-submit-mechanism.mjs` lands a 2-tx plan); the
+      proof-bearing steps remain gated on the WASM↔on-chain proof version skew.
+- [ ] Resolve the proof version skew (track `@solana/zk-sdk` ↔ agave matrix /
+      token-2022#657 re-enablement) to land a full confidential transfer live.
 
 > **Kill/Pivot gate:** if you cannot reproduce the confidential flow on the local
 > fork by end of Week 1, pivot to the runner-up: Light Protocol ZK-compression

@@ -19,7 +19,7 @@ homomorphic ciphertext arithmetic, each checkable with `verifyProof`), instructi
 encoding (ZK-program verify/context-state/close + the Token-2022 confidential
 `Withdraw`, validated byte-for-byte against a real on-chain instruction), the CLI
 (`inspect`/`decrypt`), an RPC client and a web inspector are working and covered
-by 95 tests across SDK + CLI + inspector, exercising the real `@solana/zk-sdk`
+by 98 tests across SDK + CLI + inspector + kit, exercising the real `@solana/zk-sdk`
 WASM. The full confidential flow
 (deposit → apply → decrypt) has been reproduced end-to-end on a surfpool fork
 with a current Token-2022, and the SDK's decryption is validated against a real

@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@confidentialkit/kit':
+        specifier: workspace:*
+        version: link:packages/kit
       '@confidentialkit/sdk':
         specifier: workspace:*
         version: link:packages/sdk
@@ -95,6 +98,15 @@ importers:
       vitest:
         specifier: ^2.1.9
         version: 2.1.9(@types/node@22.19.21)
+
+  packages/kit:
+    dependencies:
+      '@confidentialkit/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+      '@solana/kit':
+        specifier: ^3.0.3
+        version: 3.0.3(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(ws@8.21.0)
 
   packages/sdk:
     dependencies:

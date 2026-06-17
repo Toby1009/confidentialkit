@@ -1,0 +1,32 @@
+{
+  "name": "@confidentialkit/kit",
+  "version": "0.0.1",
+  "description": "@solana/kit adapter for ConfidentialKit — submit confidential-transfer instruction plans.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@confidentialkit/sdk": "workspace:*",
+    "@solana/kit": "^3.0.3"
+  },
+  "keywords": ["solana", "token-2022", "confidential-transfer", "kit"],
+  "publishConfig": {
+    "access": "public"
+  }
+}
