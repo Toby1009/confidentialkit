@@ -17,6 +17,9 @@
     "clean": "pnpm -r clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "@confidentialkit/sdk": "workspace:*",
+    "@solana/kit": "^3.0.3",
+    "@solana/zk-sdk": "0.4.2",
     "@types/node": "^22.10.0",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",

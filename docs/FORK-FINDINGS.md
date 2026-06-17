@@ -75,3 +75,37 @@ offline golden fixture: `packages/sdk/src/__fixtures__/real-nonzero-account.ts`
 > Reproduce with `scripts/repro-confidential-flow.sh` (it builds + overrides the
 > program, then runs the full flow). This proves the thesis directly: **build and
 > demo against a fork today, mainnet-ready the moment the program re-enables.**
+
+## WASM ↔ on-chain proof version skew (2026 — proof generation)
+
+The SDK now generates the ZK proofs itself (`generatePubkeyValidityProof`, etc.)
+and encodes the inline ZK ElGamal `Verify` instruction
+(`encodeVerifyProofInstruction`). Submitting one to the fork revealed a concrete
+interop gap, reproducible with `scripts/check-onchain-proof-compat.mjs`:
+
+| Check | Result |
+| --- | --- |
+| SDK proof passes the WASM verifier (`verifyProof`) | ✅ |
+| Our inline instruction matches spl-token's byte-for-byte (program ZK, 0 accounts, 97 B, disc 4) | ✅ |
+| spl-token's **Rust**-generated proof, submitted via our `@solana/kit` path | ✅ accepted |
+| Our **WASM** (`@solana/zk-sdk` 0.4.2) proof, same path | ❌ `SigmaProof(PubkeyValidity, AlgebraicRelation)` |
+
+**Diagnosis.** The proof is internally valid — it just fails the on-chain
+verification *equation* because `@solana/zk-sdk` 0.4.2 and the ZK ElGamal program
+that surfpool bundles (agave `3.1.6`) compute the Fiat-Shamir challenge from
+slightly different transcripts. Same family as the "Phantom Challenge" issue:
+small transcript differences silently change the challenge, so a proof valid
+under one version is rejected by another. spl-token-cli 5.5.0 (native Rust,
+version-matched to the program) is accepted; the WASM build is the outlier here.
+
+**Takeaways.**
+- ConfidentialKit's proof generation is *cryptographically* correct (it
+  self-verifies with the audited WASM verifier) and the instruction encoding is
+  correct (byte-identical to the working spl-token instruction).
+- **On-chain acceptance additionally requires the `@solana/zk-sdk` WASM version
+  to match the target cluster's ZK ElGamal program version.** This is exactly the
+  kind of DevEx footgun ConfidentialKit should surface — the compat probe lets a
+  developer check it for a given cluster in one command.
+- Mitigations to track: pin/track the `@solana/zk-sdk` ↔ agave version matrix,
+  and (once the program re-enables on a known version) validate end-to-end against
+  it. Until then, proof generation is validated offline against the WASM verifier.

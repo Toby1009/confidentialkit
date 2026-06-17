@@ -47,6 +47,13 @@ export type {
 // Homomorphic ciphertext arithmetic
 export { subtractAmount, addAmount, subtractTransferAmount } from "./crypto/ciphertext-math.js";
 
+// ZK-program instruction encoding
+export {
+  encodeVerifyProofInstruction,
+  ZK_ELGAMAL_PROOF_PROGRAM_ADDRESS,
+} from "./proofs/instructions.js";
+export type { ZkProofInstruction } from "./proofs/instructions.js";
+
 // RPC
 export { fetchAccountData } from "./rpc.js";
 
