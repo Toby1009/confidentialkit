@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Cluster, DecryptedConfidentialAccount } from "@confidentialkit/sdk";
 import { buildKeys, inspectOffline, inspectViaRpc } from "./inspector.js";
 import { toReport, type Report } from "./format.js";
@@ -17,8 +17,12 @@ export function App() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Monotonic id so a slow in-flight request can't overwrite state after the
+  // user has changed inputs and submitted again.
+  const latestRequest = useRef(0);
 
   async function run() {
+    const requestId = ++latestRequest.current;
     setBusy(true);
     setError(null);
     setReport(null);
@@ -28,11 +32,13 @@ export function App() {
         mode === "offline"
           ? await inspectOffline(accountData, keys)
           : await inspectViaRpc(account, cluster, rpcUrl, keys);
-      setReport(toReport(result));
+      if (requestId === latestRequest.current) setReport(toReport(result));
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (requestId === latestRequest.current) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
-      setBusy(false);
+      if (requestId === latestRequest.current) setBusy(false);
     }
   }
 
@@ -48,6 +54,7 @@ export function App() {
       </header>
 
       <section className="card">
+       <fieldset className="form" disabled={busy}>
         <div className="tabs">
           <button className={mode === "offline" ? "active" : ""} onClick={() => setMode("offline")}>
             Paste account data
@@ -108,6 +115,7 @@ export function App() {
         <button className="primary" onClick={run} disabled={busy}>
           {busy ? "Inspecting…" : "Inspect"}
         </button>
+       </fieldset>
       </section>
 
       {error && <section className="card error">⚠ {error}</section>}

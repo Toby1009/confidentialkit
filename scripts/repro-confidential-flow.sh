@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 #
-# Week-1 de-risk gate, fully reproduced: stand up a surfpool mainnet-fork, deploy
-# a CURRENT Token-2022 onto the canonical program id (the mainnet-cloned build
-# has confidential transfers disabled), run the full confidential flow
+# Week-1 de-risk gate, fully reproduced: against a RUNNING surfpool mainnet-fork,
+# deploy a CURRENT Token-2022 onto the canonical program id (the mainnet-cloned
+# build has confidential transfers disabled), run the full confidential flow
 # (configure -> deposit -> apply), and dump a real non-zero account that the SDK
 # can decrypt. See docs/FORK-FINDINGS.md.
 #
-# Requires: solana CLI + spl-token + cargo-build-sbf + git + surfpool on PATH.
+# Start the fork first in another terminal:  pnpm fork:up
+#   (i.e. `surfpool start --network mainnet --no-tui --port 8899`)
+#
+# Requires: solana CLI + spl-token + cargo-build-sbf + git on PATH, and a
+# surfpool fork listening at $RPC.
 set -euo pipefail
 
 WORKDIR="${WORKDIR:-.surfpool-run}"
@@ -18,6 +22,14 @@ mkdir -p "$WORKDIR"
 
 sol() { solana -C "$CONFIG" "$@"; }
 tok() { spl-token -C "$CONFIG" "$@"; }
+
+# 0. Require a running fork — this script does not start surfpool itself.
+if ! curl -s "$RPC" -X POST -H 'Content-Type: application/json' \
+     -d '{"jsonrpc":"2.0","id":1,"method":"getHealth"}' | grep -q '"result"'; then
+  echo "error: no Solana RPC at $RPC." >&2
+  echo "  Start a fork first:  pnpm fork:up   (surfpool start --network mainnet --no-tui)" >&2
+  exit 1
+fi
 
 # 1. Build a current Token-2022 .so (skip if already built).
 SO="$BUILD/token-2022/target/deploy/spl_token_2022.so"
