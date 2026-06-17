@@ -45,7 +45,7 @@ export interface ConfidentialAccountState {
 export interface ConfidentialCiphertexts {
   /** ElGamal ciphertext, low 16 bits of the pending balance (64 bytes). */
   readonly pendingBalanceLo: Uint8Array;
-  /** ElGamal ciphertext, bits [16,48) of the pending balance (64 bytes). */
+  /** ElGamal ciphertext, bits [16,64) of the pending balance (64 bytes). */
   readonly pendingBalanceHi: Uint8Array;
   /** ElGamal ciphertext of the available balance (64 bytes). */
   readonly availableBalance: Uint8Array;

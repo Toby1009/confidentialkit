@@ -18,7 +18,7 @@ export interface DecodeOptions {
   readonly keys?: DecryptKeys;
 }
 
-/** Bits [0,16) live in `pending_balance_lo`; bits [16,48) in `pending_balance_hi`. */
+/** Bits [0,16) live in `pending_balance_lo`; bits [16,64) in `pending_balance_hi`. */
 const PENDING_HI_SHIFT = 16n;
 
 /**

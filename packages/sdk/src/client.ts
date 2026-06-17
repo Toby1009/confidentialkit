@@ -1,4 +1,4 @@
-import { ConfidentialKitError } from "./errors.js";
+import { ConfidentialKitError, InvalidInputError } from "./errors.js";
 import { decodeConfidentialAccount, type DecryptKeys } from "./decode.js";
 import { fetchAccountData } from "./rpc.js";
 import type { Address, DecryptedConfidentialAccount } from "./types.js";
@@ -34,7 +34,14 @@ export class ConfidentialKit {
   readonly #fetch: typeof fetch;
 
   constructor(config: ConfidentialKitConfig = {}) {
-    this.cluster = config.cluster ?? "localnet";
+    const cluster = config.cluster ?? "localnet";
+    if (!Object.hasOwn(DEFAULT_RPC_URLS, cluster)) {
+      throw new InvalidInputError(
+        "cluster",
+        `expected localnet, devnet, or mainnet-beta; got ${String(cluster)}`,
+      );
+    }
+    this.cluster = cluster;
     this.rpcUrl = config.rpcUrl ?? DEFAULT_RPC_URLS[this.cluster];
     this.#fetch = config.fetch ?? fetch;
   }

@@ -36,7 +36,7 @@ export interface FixtureOptions {
   keys: FixtureKeys;
   /** Low 16 bits of the pending balance. */
   pendingLo?: bigint;
-  /** Bits [16,48) of the pending balance. */
+  /** Bits [16,64) of the pending balance. */
   pendingHi?: bigint;
   /** Available balance (encoded into both the ElGamal and AES ciphertexts). */
   available?: bigint;
