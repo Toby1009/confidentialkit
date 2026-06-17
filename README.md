@@ -33,7 +33,7 @@ program re-enabling — see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 | --- | --- | --- |
 | [`@confidentialkit/sdk`](packages/sdk) | Parse Token-2022 confidential accounts, decrypt available (AES) + pending (ElGamal) balances, derive keys from wallet signatures, and fetch via RPC — all over the audited `@solana/zk-sdk` WASM. | ✅ implemented + tested |
 | [`@confidentialkit/cli`](packages/cli) | `confidentialkit inspect` + `decrypt` — solves [token-2022#145](https://github.com/solana-program/token-2022/issues/145): turns raw ElGamal/AES ciphertexts into human-readable balances. | ✅ implemented + tested |
-| [`apps/inspector`](apps/inspector) | Lightweight web "ciphertext inspector" — decode confidential account state in-browser via WASM. | 🚧 Week 4 |
+| [`apps/inspector`](apps/inspector) | Web "ciphertext inspector" — decode confidential account state in-browser via WASM (paste base64 or fetch via RPC). | ✅ implemented + tested |
 | confidential transfer lifecycle (configure → deposit → apply → transfer → withdraw) | Proof generation + transaction construction. | ⏳ gated on ZK ElGamal re-enablement |
 
 ## Why this exists

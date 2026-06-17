@@ -13,7 +13,8 @@ demoing against a local Surfpool mainnet-fork.
 - [x] Token-2022 TLV + ConfidentialTransferAccount parser (`src/state/`).
 - [x] High-level `decodeConfidentialAccount` + `ConfidentialKit.inspect` (RPC).
 - [x] CLI `inspect` + `decrypt` (solves token-2022#145).
-- [x] 44 tests across SDK + CLI against the real WASM; CI green.
+- [x] Web ciphertext inspector (Vite + React, in-browser WASM) — `apps/inspector`.
+- [x] 55 tests across SDK + CLI + inspector against the real WASM; CI green.
 
 ## Week 1 — Reproduce the transfer flow (de-risk gate)
 - [ ] Stand up a Surfpool mainnet-fork with Token-2022 cloned (`pnpm fork:up`).
