@@ -152,14 +152,37 @@ Goods Funding case.
 
 ## Builder
 
-> Personalize this section.
+> Confirm the bracketed facts before submitting.
 
-Privacy / ZK background from the Ethereum ecosystem (Tornado Cash / RAILGUN /
-Zcash Orchard / ZK-primitive research) plus a multi-currency stablecoin build
-(ForexOS) — all of which transfer directly to Token-2022 confidential-balances
-tooling and confidential-stablecoin use cases. ConfidentialKit is the
-intersection of that privacy expertise with a documented, unfilled Solana
-developer-tooling gap.
+**[Name / handle]** — `[GitHub: @…]` · `[X: @…]` · `[site/link]`
+
+I work at the intersection of zero-knowledge cryptography and privacy
+infrastructure, which is exactly what Token-2022 Confidential Balances demand.
+My background is in **Ethereum privacy and ZK primitives** — hands-on with the
+designs behind **Tornado Cash, RAILGUN, and Zcash Orchard** `[confirm your exact
+relationship: studied / built on / contributed to / audited — and add a link or
+two]`. That work maps directly onto Solana's twisted-ElGamal confidential
+transfers: the same Pedersen commitments, sigma proofs, range proofs, and
+Fiat-Shamir transcripts I've worked with in the Ethereum/Zcash world are the
+primitives ConfidentialKit wraps here.
+
+I'm also building **ForexOS**, a multi-currency stablecoin system `[one line: what
+it is + status — designing / in dev / live — and a link]`. Confidential balances
+are the missing privacy layer for exactly that kind of regulated, multi-currency
+stablecoin product, so ConfidentialKit is both a public good and a direct enabler
+of my own roadmap.
+
+**Why I'm well-positioned for this specific grant:**
+- ZK/privacy depth — I can reason about and debug the proof system itself, not
+  just call an SDK. (This project already surfaced and documented a real
+  `@solana/zk-sdk` ↔ on-chain transcript version skew — see `docs/FORK-FINDINGS.md`.)
+- Confidential-stablecoin context from ForexOS — I'm building for the exact
+  issuer use case (PYUSD/USDG/AUSD-style) ConfidentialKit serves.
+- Track record of shipping: this SDK already exists, is tested, and is validated
+  against real on-chain transactions — not a proposal for future work.
+
+`[Optional: current role / Staff-or-CTO trajectory, prior shipped projects,
+relevant talks or writeups.]`
 
 ---
 
