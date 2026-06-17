@@ -53,6 +53,18 @@ describe("generateWithdrawProofs", () => {
     ).rejects.toBeInstanceOf(InvalidInputError);
   });
 
+  it("rejects a currentBalance outside u64 (would silently wrap)", async () => {
+    const { ct, secret } = account(1n);
+    await expect(
+      generateWithdrawProofs({
+        elgamalSecret: secret,
+        currentAvailableCiphertext: ct,
+        currentBalance: (1n << 64n) + 100n,
+        withdrawAmount: 1n,
+      }),
+    ).rejects.toBeInstanceOf(InvalidInputError);
+  });
+
   it("fails proof generation when currentBalance does not match the ciphertext", async () => {
     const { ct, secret } = account(100n); // ciphertext really encrypts 100
     await expect(

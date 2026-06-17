@@ -43,4 +43,11 @@ describe("subtractAmount / addAmount", () => {
     const { ct } = encrypt(1n);
     expect(() => subtractAmount(ct, -1n)).toThrow(InvalidInputError);
   });
+
+  it("validates the handle point, not just the commitment", () => {
+    const { ct } = encrypt(1n);
+    const badHandle = Uint8Array.from(ct);
+    badHandle.fill(0xff, 32, 64); // non-canonical ristretto encoding
+    expect(() => subtractAmount(badHandle, 0n)).toThrow(InvalidInputError);
+  });
 });

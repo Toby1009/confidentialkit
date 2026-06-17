@@ -82,6 +82,20 @@ describe("generateTransferProofs", () => {
     ).rejects.toBeInstanceOf(InvalidInputError);
   });
 
+  it("rejects a sourceCurrentBalance outside u64 (would silently wrap)", async () => {
+    const source = keypair(10);
+    const dest = keypair(11);
+    await expect(
+      generateTransferProofs({
+        sourceElgamalSecret: source.secret().toBytes(),
+        sourceCurrentAvailableCiphertext: source.pubkey().encryptU64(1n).toBytes(),
+        sourceCurrentBalance: (1n << 64n) + 5n,
+        transferAmount: 1n,
+        destinationElgamalPubkey: dest.pubkey().toBytes(),
+      }),
+    ).rejects.toBeInstanceOf(InvalidInputError);
+  });
+
   it("rejects an amount beyond 48 bits", async () => {
     const source = keypair(8);
     const dest = keypair(9);

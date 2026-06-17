@@ -37,7 +37,11 @@ const signer = await createKeyPairSignerFromBytes(
   Uint8Array.from(JSON.parse(readFileSync(".surfpool-run/payer.json", "utf8"))),
 );
 
-const secret = zk.ElGamalKeypair.fromSeed(new Uint8Array(32).fill(9)).secret().toBytes();
+const keypair = zk.ElGamalKeypair.fromSeed(new Uint8Array(32).fill(9));
+const secretKey = keypair.secret();
+const secret = secretKey.toBytes();
+secretKey.free();
+keypair.free();
 const { proof } = await generatePubkeyValidityProof(secret);
 console.log(`SDK proof generated (${proof.length} B). Offline verifyProof: ${await verifyProof("pubkey-validity", proof)}`);
 

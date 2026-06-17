@@ -27,15 +27,14 @@ function pointAt(bytes: Uint8Array, offset: number): InstanceType<typeof Point> 
   }
 }
 
-const commitmentPoint = (ciphertext: Uint8Array) => pointAt(ciphertext, 0);
-
 /** Low 16 bits of a transfer amount go in the `lo` component; the next bits in `hi`. */
 const TRANSFER_AMOUNT_LO_BITS = 16n;
 
-function withCommitment(ciphertext: Uint8Array, newCommitment: InstanceType<typeof Point>): Uint8Array {
+/** Serialize an ElGamal ciphertext from its commitment + handle points (canonical). */
+function assemble(commitment: InstanceType<typeof Point>, handle: InstanceType<typeof Point>): Uint8Array {
   const out = new Uint8Array(ELGAMAL_CIPHERTEXT_LEN);
-  out.set(newCommitment.toBytes(), 0);
-  out.set(ciphertext.subarray(32, 64), 32); // handle unchanged
+  out.set(commitment.toBytes(), 0);
+  out.set(handle.toBytes(), 32);
   return out;
 }
 
@@ -43,18 +42,20 @@ function withCommitment(ciphertext: Uint8Array, newCommitment: InstanceType<type
 export function subtractAmount(ciphertext: Uint8Array, amount: bigint): Uint8Array {
   assertByteLength(ciphertext, ELGAMAL_CIPHERTEXT_LEN, "ElGamal ciphertext");
   if (amount < 0n) throw new InvalidInputError("amount", "must be non-negative");
-  const c = commitmentPoint(ciphertext);
-  const newC = amount === 0n ? c : c.subtract(Point.BASE.multiply(amount));
-  return withCommitment(ciphertext, newC);
+  const commitment = pointAt(ciphertext, 0);
+  const handle = pointAt(ciphertext, 32); // validated, not just copied
+  const newC = amount === 0n ? commitment : commitment.subtract(Point.BASE.multiply(amount));
+  return assemble(newC, handle);
 }
 
 /** Add a public `amount` to an ElGamal ciphertext: encrypts `value + amount`. */
 export function addAmount(ciphertext: Uint8Array, amount: bigint): Uint8Array {
   assertByteLength(ciphertext, ELGAMAL_CIPHERTEXT_LEN, "ElGamal ciphertext");
   if (amount < 0n) throw new InvalidInputError("amount", "must be non-negative");
-  const c = commitmentPoint(ciphertext);
-  const newC = amount === 0n ? c : c.add(Point.BASE.multiply(amount));
-  return withCommitment(ciphertext, newC);
+  const commitment = pointAt(ciphertext, 0);
+  const handle = pointAt(ciphertext, 32); // validated, not just copied
+  const newC = amount === 0n ? commitment : commitment.add(Point.BASE.multiply(amount));
+  return assemble(newC, handle);
 }
 
 const GROUPED_3_HANDLES_LEN = 128; // commitment ‖ 3 decrypt handles

@@ -9,6 +9,27 @@ const TRANSFER_AMOUNT_LO_BITS = 16n;
 const TRANSFER_AMOUNT_HI_BITS = 32n;
 const TRANSFER_LO_MASK = (1n << TRANSFER_AMOUNT_LO_BITS) - 1n;
 const MAX_TRANSFER_AMOUNT = (1n << (TRANSFER_AMOUNT_LO_BITS + TRANSFER_AMOUNT_HI_BITS)) - 1n;
+const MAX_U64 = (1n << 64n) - 1n;
+
+/**
+ * Reject balances/amounts outside `[0, 2^64)` before they reach the proof APIs:
+ * `BigUint64Array` silently wraps modulo 2^64, which would otherwise yield a
+ * verifiable proof for the wrong (truncated) value.
+ */
+function assertU64(value: bigint, what: string): void {
+  if (value < 0n || value > MAX_U64) {
+    throw new InvalidInputError(what, "must be in [0, 2^64)");
+  }
+}
+
+/** Best-effort free that tolerates an already-consumed WASM pointer. */
+function safeFree(obj: { free(): void } | undefined): void {
+  try {
+    obj?.free();
+  } catch {
+    // pointer already taken (e.g. moved into a Vec-by-value constructor)
+  }
+}
 
 /**
  * Client-side generation of the zero-knowledge proofs that the Token-2022
@@ -57,9 +78,9 @@ export async function generatePubkeyValidityProof(
     proof = new zk.PubkeyValidityProofData(keypair);
     return extract(proof);
   } finally {
-    secret?.free();
-    keypair?.free();
-    proof?.free();
+    safeFree(secret);
+    safeFree(keypair);
+    safeFree(proof);
   }
 }
 
@@ -98,10 +119,10 @@ export async function generateZeroBalanceProof(
     }
     return extract(proof);
   } finally {
-    secret?.free();
-    keypair?.free();
-    ct?.free();
-    proof?.free();
+    safeFree(secret);
+    safeFree(keypair);
+    safeFree(ct ?? undefined);
+    safeFree(proof);
   }
 }
 
@@ -139,6 +160,7 @@ export async function generateWithdrawProofs(
   const { elgamalSecret, currentAvailableCiphertext, currentBalance, withdrawAmount } = params;
   assertByteLength(elgamalSecret, ELGAMAL_SECRET_LEN, "ElGamal secret key");
   assertByteLength(currentAvailableCiphertext, ELGAMAL_CIPHERTEXT_LEN, "available ciphertext");
+  assertU64(currentBalance, "currentBalance");
   if (withdrawAmount < 0n) throw new InvalidInputError("withdrawAmount", "must be non-negative");
   if (withdrawAmount > currentBalance) {
     throw new InvalidInputError("withdrawAmount", "exceeds the current balance");
@@ -185,10 +207,6 @@ export async function generateWithdrawProofs(
         { cause },
       );
     }
-    // The range constructor takes ownership of the commitment and opening (the
-    // range proof frees them); drop our references so `finally` doesn't double-free.
-    commitment = undefined;
-    opening = undefined;
     return {
       equalityProof: extract(equality),
       rangeProof: extract(range),
@@ -196,13 +214,11 @@ export async function generateWithdrawProofs(
       newBalance,
     };
   } finally {
-    secret?.free();
-    keypair?.free();
-    ct?.free();
-    opening?.free();
-    commitment?.free();
-    equality?.free();
-    range?.free();
+    // The range constructor takes ownership of the commitment + opening; safeFree
+    // tolerates the resulting already-consumed pointers (and any error path).
+    for (const obj of [secret, keypair, ct, opening, commitment, equality, range]) {
+      safeFree(obj ?? undefined);
+    }
   }
 }
 
@@ -254,6 +270,7 @@ export async function generateTransferProofs(
   assertByteLength(sourceElgamalSecret, ELGAMAL_SECRET_LEN, "ElGamal secret key");
   assertByteLength(sourceCurrentAvailableCiphertext, ELGAMAL_CIPHERTEXT_LEN, "available ciphertext");
   assertByteLength(destinationElgamalPubkey, ELGAMAL_PUBKEY_LEN, "destination ElGamal pubkey");
+  assertU64(sourceCurrentBalance, "sourceCurrentBalance");
   if (transferAmount < 0n || transferAmount > MAX_TRANSFER_AMOUNT) {
     throw new InvalidInputError("transferAmount", `must be in [0, ${MAX_TRANSFER_AMOUNT}]`);
   }
@@ -271,7 +288,6 @@ export async function generateTransferProofs(
   const owned: { free(): void }[] = [];
   const keep = <T extends { free(): void }>(o: T): T => (owned.push(o), o);
 
-  let consumedByRange: ({ free(): void } | undefined)[] = [];
   try {
     let secret;
     try {
@@ -335,9 +351,6 @@ export async function generateTransferProofs(
         { cause },
       );
     }
-    // The range constructor took ownership of these; the range proof frees them.
-    consumedByRange = [newCommitment, commitmentLo, commitmentHi, paddingCommitment, newOpening, openingLo, openingHi, paddingOpening];
-
     return {
       equalityProof: extract(equality),
       validityProof: extract(validity),
@@ -348,8 +361,9 @@ export async function generateTransferProofs(
       newSourceBalance,
     };
   } finally {
-    const consumed = new Set(consumedByRange);
-    for (const o of owned) if (!consumed.has(o)) o.free();
+    // The range constructor consumes its commitments/openings; safeFree tolerates
+    // the resulting already-taken pointers (and frees everything on error paths).
+    for (const o of owned) safeFree(o);
   }
 }
 
