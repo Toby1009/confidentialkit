@@ -1,6 +1,19 @@
 # ConfidentialKit
 
+[![npm: @confidentialkit/sdk](https://img.shields.io/npm/v/@confidentialkit/sdk?label=%40confidentialkit%2Fsdk)](https://www.npmjs.com/package/@confidentialkit/sdk)
+[![npm: @confidentialkit/cli](https://img.shields.io/npm/v/@confidentialkit/cli?label=%40confidentialkit%2Fcli)](https://www.npmjs.com/package/@confidentialkit/cli)
+[![npm: @confidentialkit/kit](https://img.shields.io/npm/v/@confidentialkit/kit?label=%40confidentialkit%2Fkit)](https://www.npmjs.com/package/@confidentialkit/kit)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
+
 > An open-source developer toolkit that makes Solana's **Token-2022 Confidential Balances** actually usable.
+
+## Install
+
+```bash
+npm install @confidentialkit/sdk          # core SDK (parse / decrypt / prove)
+npm install -g @confidentialkit/cli       # inspect + decrypt from the terminal
+npm install @confidentialkit/kit          # @solana/kit submission adapter
+```
 
 ConfidentialKit closes the documented developer-experience gap around confidential
 transfers — no `spl-token --decrypt`, a historically Rust-only flow, and a
