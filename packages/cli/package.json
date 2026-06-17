@@ -1,0 +1,26 @@
+{
+  "name": "@confidentialkit/cli",
+  "version": "0.0.1",
+  "description": "CLI for inspecting and decrypting Solana Token-2022 Confidential Balances.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "confidentialkit": "./dist/index.js"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@confidentialkit/sdk": "workspace:*",
+    "commander": "^12.1.0"
+  },
+  "keywords": ["solana", "token-2022", "confidential-transfer", "cli", "decrypt"],
+  "publishConfig": {
+    "access": "public"
+  }
+}

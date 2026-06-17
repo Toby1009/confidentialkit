@@ -1,0 +1,28 @@
+{
+  "name": "@confidentialkit/sdk",
+  "version": "0.0.1",
+  "description": "Ergonomic TypeScript SDK for Solana Token-2022 Confidential Balances.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["solana", "token-2022", "confidential-transfer", "zk", "elgamal", "privacy"],
+  "publishConfig": {
+    "access": "public"
+  }
+}
