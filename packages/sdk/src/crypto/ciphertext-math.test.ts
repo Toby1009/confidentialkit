@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as zk from "@solana/zk-sdk/node";
-import { addAmount, subtractAmount } from "./ciphertext-math.js";
+import { addAmount, groupedHandleCiphertext, subtractAmount } from "./ciphertext-math.js";
 import { decryptElGamalCiphertext } from "./decrypt.js";
 import { InvalidInputError } from "../errors.js";
 
@@ -49,5 +49,30 @@ describe("subtractAmount / addAmount", () => {
     const badHandle = Uint8Array.from(ct);
     badHandle.fill(0xff, 32, 64); // non-canonical ristretto encoding
     expect(() => subtractAmount(badHandle, 0n)).toThrow(InvalidInputError);
+  });
+});
+
+describe("groupedHandleCiphertext", () => {
+  it("extracts each party's decryptable ciphertext from a 3-handle grouped ciphertext", async () => {
+    const src = zk.ElGamalKeypair.fromSeed(new Uint8Array(32).fill(1));
+    const dst = zk.ElGamalKeypair.fromSeed(new Uint8Array(32).fill(2));
+    const aud = zk.ElGamalKeypair.fromSeed(new Uint8Array(32).fill(3));
+    const opening = new zk.PedersenOpening();
+    const grouped = zk.GroupedElGamalCiphertext3Handles.encryptWith(
+      src.pubkey(),
+      dst.pubkey(),
+      aud.pubkey(),
+      77n,
+      opening,
+    ).toBytes();
+
+    // index 0 = source, 1 = destination, 2 = auditor
+    expect(await decryptElGamalCiphertext(groupedHandleCiphertext(grouped, 0), src.secret().toBytes())).toBe(77n);
+    expect(await decryptElGamalCiphertext(groupedHandleCiphertext(grouped, 1), dst.secret().toBytes())).toBe(77n);
+    expect(await decryptElGamalCiphertext(groupedHandleCiphertext(grouped, 2), aud.secret().toBytes())).toBe(77n);
+  });
+
+  it("rejects an out-of-range handle index", () => {
+    expect(() => groupedHandleCiphertext(new Uint8Array(128), 3)).toThrow(InvalidInputError);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   TOKEN_2022_PROGRAM_ADDRESS,
+  encodeConfidentialTransferInstruction,
   encodeConfidentialWithdrawInstruction,
 } from "./token2022.js";
 import { bytesToHex, hexToBytes } from "../bytes.js";
@@ -63,6 +64,59 @@ describe("encodeConfidentialWithdrawInstruction", () => {
         amount: 1n << 64n,
         decimals: 9,
         newDecryptableAvailableBalance: hexToBytes(NEW_DECRYPTABLE),
+      }),
+    ).toThrow(InvalidInputError);
+  });
+});
+
+/**
+ * GOLDEN VECTOR — the exact `Transfer` instruction from spl-token-cli's
+ * `transfer ... 250 ... --confidential` on a current Token-2022 (surfpool fork).
+ */
+const REAL_TRANSFER_DATA =
+  "1b07728079d37abfe114bb9a1d80d06f91df8f3dc932f3e793481a3b3e5e13a266081a895191f0da6e52d7c443e7e93bff0daad31cd58bb7bbf2d26fb34a0f771457228b7f1d00000000000000000000000000000000000000000000000000000000000000003200b6cd9551b22a8b7a1c9d6749729eb902429cd90383061f7f472d9c20722b0000000000000000000000000000000000000000000000000000000000000000000000";
+const TACCOUNTS = {
+  sourceTokenAccount: "7iJNbm5MnnRThCpPr1joiUaP2TX4RJh2PAyQvL3tkN5A",
+  mint: "7RwQhdZLDpCqCTwvrx3M1cU2t2ZoqEziDVbKM6SLpgf2",
+  destinationTokenAccount: "863jfsbc1Y5arDFBDCdxWHrVTfbAzxPxVrZRLyUkxhQS",
+  equalityContextState: "3uGzQLQNzrnQrVAuTP5sUfP9CYUcFGj1mLNkpmT4rF1z",
+  validityContextState: "3tYiHTUMXWPg1sUtGc3nTB7632ArsNWrM22LQ9bH9rj8",
+  rangeContextState: "2cXfSqkJYBdiYZAvjHj2EE5L3PWAGTfGQZJw2P6Sg9Me",
+  owner: "HN7yPSafA7aVEp28vNREtmXRemtg4XAeWvH2N85XYYU5",
+} as const;
+
+describe("encodeConfidentialTransferInstruction", () => {
+  it("matches the real spl-token confidential transfer byte-for-byte", () => {
+    const real = hexToBytes(REAL_TRANSFER_DATA);
+    const ix = encodeConfidentialTransferInstruction({
+      ...TACCOUNTS,
+      newSourceDecryptableAvailableBalance: real.subarray(2, 38),
+      transferAmountAuditorCiphertextLo: real.subarray(38, 102),
+      transferAmountAuditorCiphertextHi: real.subarray(102, 166),
+    });
+
+    expect(ix.programAddress).toBe(TOKEN_2022_PROGRAM_ADDRESS);
+    expect(bytesToHex(ix.data)).toBe(REAL_TRANSFER_DATA);
+    expect(ix.accounts.map((a) => a.address)).toEqual([
+      TACCOUNTS.sourceTokenAccount,
+      TACCOUNTS.mint,
+      TACCOUNTS.destinationTokenAccount,
+      TACCOUNTS.equalityContextState,
+      TACCOUNTS.validityContextState,
+      TACCOUNTS.rangeContextState,
+      TACCOUNTS.owner,
+    ]);
+    expect(ix.accounts[2]?.role).toBe("writable"); // destination receives
+  });
+
+  it("rejects wrong-length ciphertext inputs", () => {
+    const real = hexToBytes(REAL_TRANSFER_DATA);
+    expect(() =>
+      encodeConfidentialTransferInstruction({
+        ...TACCOUNTS,
+        newSourceDecryptableAvailableBalance: real.subarray(2, 38),
+        transferAmountAuditorCiphertextLo: new Uint8Array(10),
+        transferAmountAuditorCiphertextHi: real.subarray(102, 166),
       }),
     ).toThrow(InvalidInputError);
   });

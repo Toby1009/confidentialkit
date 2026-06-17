@@ -58,10 +58,16 @@ demoing against a local Surfpool mainnet-fork.
       `encodeCloseContextStateInstruction`). Library-agnostic descriptors that map
       onto `@solana/kit`. The Withdraw encoder is validated **byte-for-byte against
       a real spl-token withdrawal** captured on the fork (`instructions/`).
-- [ ] Orchestration: sequence proof-gen → context-state account creation
-      (System.CreateAccount, sized per proof context) → verify → withdraw/transfer
-      → close, into the multi-transaction flow. Plus the Transfer instruction
-      encoder (3 context-state accounts). Live submission still gated on the
+- [x] **Transfer instruction encoder** (`encodeConfidentialTransferInstruction`)
+      + auditor-ciphertext extraction (`groupedHandleCiphertext`) — validated
+      byte-for-byte against a real spl-token confidential transfer.
+- [x] **Orchestration** (`buildConfidentialTransferPlan`): emits the ordered
+      6-transaction sequence (create+verify ×3 context-state accounts → transfer
+      → close), with `System.CreateAccount` encoding + captured context-state
+      sizes (`CONTEXT_STATE_ACCOUNT_SIZE`). Pure/testable; the caller wires rent +
+      signers + submission via `@solana/kit`.
+- [ ] Thin `@solana/kit` submission wrapper (generate ephemeral context-state
+      signers, fetch rent, sign + send the plan). Live landing still gated on the
       WASM↔on-chain proof version skew above.
 
 > **Kill/Pivot gate:** if you cannot reproduce the confidential flow on the local

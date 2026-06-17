@@ -61,6 +61,24 @@ export function addAmount(ciphertext: Uint8Array, amount: bigint): Uint8Array {
 const GROUPED_3_HANDLES_LEN = 128; // commitment ‖ 3 decrypt handles
 
 /**
+ * Extract a single party's ElGamal ciphertext `(commitment, handle[index])` from
+ * a 3-handle grouped ciphertext. Handle index `0` = source, `1` = destination,
+ * `2` = auditor — used to pull the auditor's transfer-amount ciphertext for the
+ * confidential `Transfer` instruction.
+ */
+export function groupedHandleCiphertext(grouped: Uint8Array, handleIndex: number): Uint8Array {
+  assertByteLength(grouped, GROUPED_3_HANDLES_LEN, "grouped 3-handle ciphertext");
+  if (handleIndex < 0 || handleIndex > 2) {
+    throw new InvalidInputError("handleIndex", "must be 0 (source), 1 (destination), or 2 (auditor)");
+  }
+  const handleOffset = 32 + 32 * handleIndex;
+  const out = new Uint8Array(ELGAMAL_CIPHERTEXT_LEN);
+  out.set(grouped.subarray(0, 32), 0); // shared commitment
+  out.set(grouped.subarray(handleOffset, handleOffset + 32), 32); // this party's handle
+  return out;
+}
+
+/**
  * Derive the source's new available-balance ciphertext for a confidential
  * transfer: `current − (sourceLo + sourceHi·2^16)`, where each `source*` is the
  * source's own ElGamal component (commitment ‖ handle index 0) of the grouped

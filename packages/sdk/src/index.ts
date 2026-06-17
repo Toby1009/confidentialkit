@@ -45,7 +45,12 @@ export type {
 } from "./proofs/index.js";
 
 // Homomorphic ciphertext arithmetic
-export { subtractAmount, addAmount, subtractTransferAmount } from "./crypto/ciphertext-math.js";
+export {
+  subtractAmount,
+  addAmount,
+  subtractTransferAmount,
+  groupedHandleCiphertext,
+} from "./crypto/ciphertext-math.js";
 
 // Instruction encoding (library-agnostic descriptors → @solana/kit)
 export {
@@ -56,9 +61,18 @@ export {
 export type { ContextStateInfo } from "./instructions/zk-program.js";
 export {
   encodeConfidentialWithdrawInstruction,
+  encodeConfidentialTransferInstruction,
   TOKEN_2022_PROGRAM_ADDRESS,
 } from "./instructions/token2022.js";
-export type { ConfidentialWithdrawParams } from "./instructions/token2022.js";
+export type {
+  ConfidentialWithdrawParams,
+  ConfidentialTransferParams,
+} from "./instructions/token2022.js";
+export { encodeCreateAccountInstruction, SYSTEM_PROGRAM_ADDRESS } from "./instructions/system.js";
+export type { CreateAccountParams } from "./instructions/system.js";
+export { CONTEXT_STATE_ACCOUNT_SIZE } from "./instructions/context-state.js";
+export { buildConfidentialTransferPlan } from "./instructions/transfer-plan.js";
+export type { ConfidentialTransferPlanParams } from "./instructions/transfer-plan.js";
 export type {
   InstructionDescriptor,
   InstructionAccount,
