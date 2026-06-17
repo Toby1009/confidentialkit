@@ -18,3 +18,7 @@ pnpm-debug.log*
 !.vscode/extensions.json
 
 .surfpool-run/
+
+# grant-application session transcripts (attach to form, do not commit)
+*-session.jsonl
+docs/grant-submission.md
