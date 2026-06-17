@@ -4,6 +4,13 @@ import { InvalidInputError } from "../errors.js";
 import { ELGAMAL_CIPHERTEXT_LEN } from "../types.js";
 
 const Point = ristretto255.Point;
+const MAX_U64 = (1n << 64n) - 1n;
+
+function assertAmountU64(amount: bigint): void {
+  if (amount < 0n || amount > MAX_U64) {
+    throw new InvalidInputError("amount", "must be a u64 token amount in [0, 2^64)");
+  }
+}
 
 /**
  * Homomorphic arithmetic on twisted-ElGamal ciphertexts, used to derive the
@@ -41,7 +48,7 @@ function assemble(commitment: InstanceType<typeof Point>, handle: InstanceType<t
 /** Subtract a public `amount` from an ElGamal ciphertext: encrypts `value - amount`. */
 export function subtractAmount(ciphertext: Uint8Array, amount: bigint): Uint8Array {
   assertByteLength(ciphertext, ELGAMAL_CIPHERTEXT_LEN, "ElGamal ciphertext");
-  if (amount < 0n) throw new InvalidInputError("amount", "must be non-negative");
+  assertAmountU64(amount);
   const commitment = pointAt(ciphertext, 0);
   const handle = pointAt(ciphertext, 32); // validated, not just copied
   const newC = amount === 0n ? commitment : commitment.subtract(Point.BASE.multiply(amount));
@@ -51,7 +58,7 @@ export function subtractAmount(ciphertext: Uint8Array, amount: bigint): Uint8Arr
 /** Add a public `amount` to an ElGamal ciphertext: encrypts `value + amount`. */
 export function addAmount(ciphertext: Uint8Array, amount: bigint): Uint8Array {
   assertByteLength(ciphertext, ELGAMAL_CIPHERTEXT_LEN, "ElGamal ciphertext");
-  if (amount < 0n) throw new InvalidInputError("amount", "must be non-negative");
+  assertAmountU64(amount);
   const commitment = pointAt(ciphertext, 0);
   const handle = pointAt(ciphertext, 32); // validated, not just copied
   const newC = amount === 0n ? commitment : commitment.add(Point.BASE.multiply(amount));

@@ -66,7 +66,14 @@ export async function decodeConfidentialAccount(
         state.ciphertexts.pendingBalanceHi,
         keys.elgamalSecret,
       );
-      pendingBalance = lo + (hi << PENDING_HI_SHIFT);
+      // A well-formed account has lo in [0, 2^16) and hi in [0, 2^48); corrupt or
+      // hostile RPC bytes could decrypt to out-of-range values that combine into
+      // an impossible balance.
+      if (lo >= 1n << 16n || hi >= 1n << 48n) {
+        decryptFailed = true;
+      } else {
+        pendingBalance = lo + (hi << PENDING_HI_SHIFT);
+      }
     } catch (err) {
       if (!(err instanceof DecryptionError)) throw err;
       decryptFailed = true;

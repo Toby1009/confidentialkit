@@ -67,6 +67,24 @@ export async function sendInstructionPlan(
     rpcSubscriptions: params.rpcSubscriptions,
   });
   const signers = params.signers ?? {};
+
+  // Fail fast (before any transaction is sent) if a signer-role account has no
+  // attached signer — otherwise signing fails opaquely partway through the plan.
+  const available = new Set([params.feePayer.address, ...Object.keys(signers)]);
+  const missing = new Set<string>();
+  for (const transaction of params.plan) {
+    for (const ix of transaction) {
+      for (const account of ix.accounts) {
+        if (account.role.endsWith("signer") && !available.has(account.address)) {
+          missing.add(account.address);
+        }
+      }
+    }
+  }
+  if (missing.size > 0) {
+    throw new Error(`Missing TransactionSigner(s) for: ${[...missing].join(", ")}`);
+  }
+
   const signatures: Signature[] = [];
 
   for (const instructions of params.plan) {

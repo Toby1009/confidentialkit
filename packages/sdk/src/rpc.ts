@@ -47,7 +47,18 @@ export async function fetchAccountData(
     throw new ConfidentialKitError(`RPC error ${body.error.code}: ${body.error.message}`);
   }
   const value = body.result?.value;
-  if (!value) return null;
+  if (value === null || value === undefined) return null;
 
-  return base64ToBytes(value.data[0]);
+  // Don't trust the RPC's shape: validate before indexing.
+  const data = value.data;
+  if (!Array.isArray(data) || data[1] !== "base64" || typeof data[0] !== "string") {
+    throw new ConfidentialKitError(
+      "Unexpected getAccountInfo response: expected base64-encoded account data",
+    );
+  }
+  try {
+    return base64ToBytes(data[0]);
+  } catch (cause) {
+    throw new ConfidentialKitError("RPC returned undecodable base64 account data", { cause });
+  }
 }

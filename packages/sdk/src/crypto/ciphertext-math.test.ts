@@ -38,10 +38,11 @@ describe("subtractAmount / addAmount", () => {
     );
   });
 
-  it("rejects malformed inputs", () => {
+  it("rejects malformed or out-of-range inputs", () => {
     expect(() => subtractAmount(new Uint8Array(10), 1n)).toThrow(InvalidInputError);
     const { ct } = encrypt(1n);
     expect(() => subtractAmount(ct, -1n)).toThrow(InvalidInputError);
+    expect(() => subtractAmount(ct, 1n << 64n)).toThrow(InvalidInputError); // > u64
   });
 
   it("validates the handle point, not just the commitment", () => {
