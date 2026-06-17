@@ -13,9 +13,10 @@ generation), is **compliance-first** (auditor keys / selective disclosure), and 
 ## Status
 
 🟢 **`0.0.x` — read path implemented and tested.** Account parsing, balance
-decryption, key derivation, the CLI (`inspect`/`decrypt`), an RPC client and a
-web inspector are working and covered by 60 tests across SDK + CLI + inspector,
-exercising the real `@solana/zk-sdk` WASM. The full confidential flow
+decryption, key derivation, lifecycle proof generation (`generatePubkeyValidityProof`
+/ `generateZeroBalanceProof` + `verifyProof`), the CLI (`inspect`/`decrypt`), an
+RPC client and a web inspector are working and covered by 66 tests across
+SDK + CLI + inspector, exercising the real `@solana/zk-sdk` WASM. The full confidential flow
 (deposit → apply → decrypt) has been reproduced end-to-end on a surfpool fork
 with a current Token-2022, and the SDK's decryption is validated against a real
 non-zero on-chain account — see [`docs/FORK-FINDINGS.md`](docs/FORK-FINDINGS.md).

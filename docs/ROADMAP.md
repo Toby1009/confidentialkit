@@ -28,8 +28,18 @@ demoing against a local Surfpool mainnet-fork.
       Captured a real **non-zero** account; the SDK decrypts its available
       balance (600 tokens) using owner keys derived from the wallet signature —
       validated offline in CI (`decode.real-nonzero.test.ts`).
-- [ ] Wire `@solana/zk-sdk` proof-data generation so the SDK can *build* the
-      transfer/withdraw proofs itself (currently exercised via the spl-token CLI).
+- [x] **Proof generation, installment 1.** SDK generates the self-contained
+      lifecycle proofs in TypeScript (`generatePubkeyValidityProof` for account
+      configuration, `generateZeroBalanceProof` for closing), plus `verifyProof`.
+      Each is validated offline by the WASM's own verifier — the same logic the
+      on-chain ZK ElGamal program runs (`src/proofs/`).
+- [ ] Transfer/withdraw proofs: add a homomorphic ciphertext-arithmetic helper
+      (new-balance ciphertext = old − amount, via ristretto point ops) to feed the
+      equality / grouped-validity / range proof generators.
+- [ ] Transaction builder: encode the ZK-program `Verify*` + Token-2022
+      confidential-transfer instructions, manage context-state accounts, and
+      sequence the multi-tx flow — so the SDK can land a transfer end-to-end
+      (today the transfer itself is driven by the spl-token CLI on the fork).
 
 > **Kill/Pivot gate:** if you cannot reproduce the confidential flow on the local
 > fork by end of Week 1, pivot to the runner-up: Light Protocol ZK-compression

@@ -27,6 +27,14 @@ export {
   elgamalPubkeyFromSecret,
 } from "./crypto/keys.js";
 
+// Proof generation
+export {
+  generatePubkeyValidityProof,
+  generateZeroBalanceProof,
+  verifyProof,
+} from "./proofs/index.js";
+export type { GeneratedProof, ProofKind } from "./proofs/index.js";
+
 // RPC
 export { fetchAccountData } from "./rpc.js";
 
