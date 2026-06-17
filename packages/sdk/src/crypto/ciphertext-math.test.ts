@@ -1,0 +1,46 @@
+import { describe, expect, it } from "vitest";
+import * as zk from "@solana/zk-sdk/node";
+import { addAmount, subtractAmount } from "./ciphertext-math.js";
+import { decryptElGamalCiphertext } from "./decrypt.js";
+import { InvalidInputError } from "../errors.js";
+
+function encrypt(value: bigint, seedByte = 1) {
+  const kp = zk.ElGamalKeypair.fromSeed(new Uint8Array(32).fill(seedByte));
+  const ct = kp.pubkey().encryptU64(value).toBytes();
+  const secret = kp.secret().toBytes();
+  kp.free();
+  return { ct, secret };
+}
+
+describe("subtractAmount / addAmount", () => {
+  it("subtracts a public amount (verified by WASM decryption)", async () => {
+    const { ct, secret } = encrypt(100n);
+    const newCt = subtractAmount(ct, 30n);
+    expect(await decryptElGamalCiphertext(newCt, secret)).toBe(70n);
+  });
+
+  it("adds a public amount", async () => {
+    const { ct, secret } = encrypt(100n);
+    expect(await decryptElGamalCiphertext(addAmount(ct, 25n), secret)).toBe(125n);
+  });
+
+  it("is a no-op for amount 0 and leaves the handle untouched", async () => {
+    const { ct, secret } = encrypt(42n);
+    const out = subtractAmount(ct, 0n);
+    expect(Array.from(out.subarray(32))).toEqual(Array.from(ct.subarray(32)));
+    expect(await decryptElGamalCiphertext(out, secret)).toBe(42n);
+  });
+
+  it("round-trips subtract then add", async () => {
+    const { ct, secret } = encrypt(500n);
+    expect(await decryptElGamalCiphertext(addAmount(subtractAmount(ct, 200n), 200n), secret)).toBe(
+      500n,
+    );
+  });
+
+  it("rejects malformed inputs", () => {
+    expect(() => subtractAmount(new Uint8Array(10), 1n)).toThrow(InvalidInputError);
+    const { ct } = encrypt(1n);
+    expect(() => subtractAmount(ct, -1n)).toThrow(InvalidInputError);
+  });
+});

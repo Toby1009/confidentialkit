@@ -33,9 +33,15 @@ demoing against a local Surfpool mainnet-fork.
       configuration, `generateZeroBalanceProof` for closing), plus `verifyProof`.
       Each is validated offline by the WASM's own verifier — the same logic the
       on-chain ZK ElGamal program runs (`src/proofs/`).
-- [ ] Transfer/withdraw proofs: add a homomorphic ciphertext-arithmetic helper
-      (new-balance ciphertext = old − amount, via ristretto point ops) to feed the
-      equality / grouped-validity / range proof generators.
+- [x] **Homomorphic ciphertext arithmetic** (`subtractAmount` / `addAmount`) over
+      ristretto255 (`@noble/curves`), validated against `@solana/zk-sdk`'s own
+      decryption (`src/crypto/ciphertext-math.ts`).
+- [x] **Withdraw proofs** (`generateWithdrawProofs`): derives the new available
+      ciphertext homomorphically and produces the equality + range proofs, each
+      accepted by the WASM verifier (`src/proofs/`).
+- [ ] Transfer proofs: amount split (lo/hi), grouped-3-handle validity
+      (source/dest/auditor) + batched-range-u128 — same `verify()`-validated
+      pattern.
 - [ ] Transaction builder: encode the ZK-program `Verify*` + Token-2022
       confidential-transfer instructions, manage context-state accounts, and
       sequence the multi-tx flow — so the SDK can land a transfer end-to-end

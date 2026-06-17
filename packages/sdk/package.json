@@ -36,6 +36,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@noble/curves": "^2.2.0",
     "@solana/zk-sdk": "0.4.2",
     "bs58": "^6.0.0"
   }

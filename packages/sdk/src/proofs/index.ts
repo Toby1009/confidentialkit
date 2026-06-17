@@ -1,5 +1,6 @@
 import { getZk } from "../wasm.js";
 import { assertByteLength } from "../bytes.js";
+import { subtractAmount } from "../crypto/ciphertext-math.js";
 import { ConfidentialKitError, InvalidInputError } from "../errors.js";
 import { ELGAMAL_CIPHERTEXT_LEN, ELGAMAL_SECRET_LEN } from "../types.js";
 
@@ -97,44 +98,152 @@ export async function generateZeroBalanceProof(
   }
 }
 
+/** The proofs a confidential withdrawal requires. */
+export interface WithdrawProofs {
+  /** Certifies the new available-balance ciphertext encrypts the new balance. */
+  readonly equalityProof: GeneratedProof;
+  /** Certifies the new balance is a valid 64-bit non-negative amount. */
+  readonly rangeProof: GeneratedProof;
+  /** The new available-balance ElGamal ciphertext after the withdrawal. */
+  readonly newAvailableCiphertext: Uint8Array;
+  /** The remaining confidential balance, base units. */
+  readonly newBalance: bigint;
+}
+
+export interface WithdrawProofParams {
+  /** The account owner's 32-byte ElGamal secret key. */
+  readonly elgamalSecret: Uint8Array;
+  /** The current available-balance ElGamal ciphertext (64 bytes). */
+  readonly currentAvailableCiphertext: Uint8Array;
+  /** The current available balance, base units (the owner knows this). */
+  readonly currentBalance: bigint;
+  /** Amount to move from the confidential balance back to the public balance. */
+  readonly withdrawAmount: bigint;
+}
+
+/**
+ * Generate the equality + range proofs for a confidential withdrawal. Derives
+ * the new available-balance ciphertext homomorphically (no secret randomness
+ * needed) and proves it encrypts the new balance, which is in range.
+ */
+export async function generateWithdrawProofs(
+  params: WithdrawProofParams,
+): Promise<WithdrawProofs> {
+  const { elgamalSecret, currentAvailableCiphertext, currentBalance, withdrawAmount } = params;
+  assertByteLength(elgamalSecret, ELGAMAL_SECRET_LEN, "ElGamal secret key");
+  assertByteLength(currentAvailableCiphertext, ELGAMAL_CIPHERTEXT_LEN, "available ciphertext");
+  if (withdrawAmount < 0n) throw new InvalidInputError("withdrawAmount", "must be non-negative");
+  if (withdrawAmount > currentBalance) {
+    throw new InvalidInputError("withdrawAmount", "exceeds the current balance");
+  }
+  const newBalance = currentBalance - withdrawAmount;
+  const newAvailableCiphertext = subtractAmount(currentAvailableCiphertext, withdrawAmount);
+
+  const zk = await getZk();
+  let secret: ReturnType<typeof zk.ElGamalSecretKey.fromBytes> | undefined;
+  let keypair: ReturnType<typeof zk.ElGamalKeypair.fromSecretKey> | undefined;
+  let ct: ReturnType<typeof zk.ElGamalCiphertext.fromBytes>;
+  let opening: InstanceType<typeof zk.PedersenOpening> | undefined;
+  let commitment: ReturnType<typeof zk.PedersenCommitment.from> | undefined;
+  let equality: InstanceType<typeof zk.CiphertextCommitmentEqualityProofData> | undefined;
+  let range: InstanceType<typeof zk.BatchedRangeProofU64Data> | undefined;
+  try {
+    try {
+      secret = zk.ElGamalSecretKey.fromBytes(elgamalSecret);
+    } catch {
+      throw new InvalidInputError("ElGamal secret key", "not a valid scalar");
+    }
+    keypair = zk.ElGamalKeypair.fromSecretKey(secret);
+    ct = zk.ElGamalCiphertext.fromBytes(newAvailableCiphertext);
+    if (!ct) throw new InvalidInputError("ElGamal ciphertext", "could not deserialize");
+    opening = new zk.PedersenOpening();
+    commitment = zk.PedersenCommitment.from(newBalance, opening);
+    try {
+      equality = new zk.CiphertextCommitmentEqualityProofData(
+        keypair,
+        ct,
+        commitment,
+        opening,
+        newBalance,
+      );
+      range = new zk.BatchedRangeProofU64Data(
+        [commitment],
+        new BigUint64Array([newBalance]),
+        new Uint8Array([64]),
+        [opening],
+      );
+    } catch (cause) {
+      throw new ConfidentialKitError(
+        "Withdraw proof generation failed — check that currentBalance matches the ciphertext",
+        { cause },
+      );
+    }
+    // The range constructor takes ownership of the commitment and opening (the
+    // range proof frees them); drop our references so `finally` doesn't double-free.
+    commitment = undefined;
+    opening = undefined;
+    return {
+      equalityProof: extract(equality),
+      rangeProof: extract(range),
+      newAvailableCiphertext,
+      newBalance,
+    };
+  } finally {
+    secret?.free();
+    keypair?.free();
+    ct?.free();
+    opening?.free();
+    commitment?.free();
+    equality?.free();
+    range?.free();
+  }
+}
+
 /** Proof kinds that {@link verifyProof} can validate. */
-export type ProofKind = "pubkey-validity" | "zero-balance";
+export type ProofKind =
+  | "pubkey-validity"
+  | "zero-balance"
+  | "ciphertext-commitment-equality"
+  | "batched-range-u64";
+
+interface VerifiableProof {
+  verify(): void;
+  free(): void;
+}
+
+type ZkModule = Awaited<ReturnType<typeof getZk>>;
+
+const DESERIALIZERS: Record<ProofKind, (zk: ZkModule, b: Uint8Array) => VerifiableProof> = {
+  "pubkey-validity": (zk, b) => zk.PubkeyValidityProofData.fromBytes(b),
+  "zero-balance": (zk, b) => zk.ZeroCiphertextProofData.fromBytes(b),
+  "ciphertext-commitment-equality": (zk, b) =>
+    zk.CiphertextCommitmentEqualityProofData.fromBytes(b),
+  "batched-range-u64": (zk, b) => zk.BatchedRangeProofU64Data.fromBytes(b),
+};
 
 /**
  * Verify a generated proof with the same logic the on-chain program runs (the
- * audited WASM verifier). Returns `true` if valid, `false` otherwise. Useful for
- * client-side checks and testing.
+ * audited WASM verifier). Returns `true` if valid, `false` for an invalid or
+ * malformed proof. Useful for client-side checks and testing.
  */
 export async function verifyProof(kind: ProofKind, proofBytes: Uint8Array): Promise<boolean> {
   const zk = await getZk();
+  const deserialize = DESERIALIZERS[kind];
+  if (!deserialize) throw new InvalidInputError("proof kind", kind);
+
+  let proof: VerifiableProof;
   try {
-    switch (kind) {
-      case "pubkey-validity": {
-        const p = zk.PubkeyValidityProofData.fromBytes(proofBytes);
-        try {
-          p.verify();
-          return true;
-        } finally {
-          p.free();
-        }
-      }
-      case "zero-balance": {
-        const p = zk.ZeroCiphertextProofData.fromBytes(proofBytes);
-        try {
-          p.verify();
-          return true;
-        } finally {
-          p.free();
-        }
-      }
-      default: {
-        const _exhaustive: never = kind;
-        throw new InvalidInputError("proof kind", String(_exhaustive));
-      }
-    }
-  } catch (err) {
-    if (err instanceof InvalidInputError) throw err;
+    proof = deserialize(zk, proofBytes);
+  } catch {
+    return false; // malformed bytes
+  }
+  try {
+    proof.verify();
+    return true;
+  } catch {
     return false;
+  } finally {
+    proof.free();
   }
 }
 
