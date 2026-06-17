@@ -47,12 +47,23 @@ export type {
 // Homomorphic ciphertext arithmetic
 export { subtractAmount, addAmount, subtractTransferAmount } from "./crypto/ciphertext-math.js";
 
-// ZK-program instruction encoding
+// Instruction encoding (library-agnostic descriptors → @solana/kit)
 export {
   encodeVerifyProofInstruction,
+  encodeCloseContextStateInstruction,
   ZK_ELGAMAL_PROOF_PROGRAM_ADDRESS,
-} from "./proofs/instructions.js";
-export type { ZkProofInstruction } from "./proofs/instructions.js";
+} from "./instructions/zk-program.js";
+export type { ContextStateInfo } from "./instructions/zk-program.js";
+export {
+  encodeConfidentialWithdrawInstruction,
+  TOKEN_2022_PROGRAM_ADDRESS,
+} from "./instructions/token2022.js";
+export type { ConfidentialWithdrawParams } from "./instructions/token2022.js";
+export type {
+  InstructionDescriptor,
+  InstructionAccount,
+  AccountRole,
+} from "./instructions/types.js";
 
 // RPC
 export { fetchAccountData } from "./rpc.js";

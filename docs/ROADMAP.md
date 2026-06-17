@@ -53,9 +53,16 @@ demoing against a local Surfpool mainnet-fork.
       + reproducible via `scripts/check-onchain-proof-compat.mjs`. See
       [`docs/FORK-FINDINGS.md`](FORK-FINDINGS.md). Resolves once the WASM version
       matches the target cluster's ZK program.
-- [ ] Token-2022 confidential-transfer instruction encoding + context-state
-      account flow + multi-tx sequencing (gated on the version skew above for live
-      submission; can proceed against a version-matched program).
+- [x] **Token-2022 `Withdraw` instruction encoder** + **ZK context-state
+      instructions** (`encodeVerifyProofInstruction` with context-state,
+      `encodeCloseContextStateInstruction`). Library-agnostic descriptors that map
+      onto `@solana/kit`. The Withdraw encoder is validated **byte-for-byte against
+      a real spl-token withdrawal** captured on the fork (`instructions/`).
+- [ ] Orchestration: sequence proof-gen → context-state account creation
+      (System.CreateAccount, sized per proof context) → verify → withdraw/transfer
+      → close, into the multi-transaction flow. Plus the Transfer instruction
+      encoder (3 context-state accounts). Live submission still gated on the
+      WASM↔on-chain proof version skew above.
 
 > **Kill/Pivot gate:** if you cannot reproduce the confidential flow on the local
 > fork by end of Week 1, pivot to the runner-up: Light Protocol ZK-compression

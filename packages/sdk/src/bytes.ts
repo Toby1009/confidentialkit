@@ -86,6 +86,18 @@ export function readU16LE(data: Uint8Array, offset: number): number {
   return data[offset]! | (data[offset + 1]! << 8);
 }
 
+/** Write an unsigned 64-bit little-endian integer into `data` at `offset`. */
+export function writeU64LE(data: Uint8Array, offset: number, value: bigint): void {
+  if (value < 0n || value > (1n << 64n) - 1n) {
+    throw new InvalidInputError("u64 value", "must be in [0, 2^64)");
+  }
+  let v = value;
+  for (let i = 0; i < 8; i++) {
+    data[offset + i] = Number(v & 0xffn);
+    v >>= 8n;
+  }
+}
+
 /** Read an unsigned 64-bit little-endian integer as a bigint. */
 export function readU64LE(data: Uint8Array, offset: number): bigint {
   if (offset + 8 > data.length) {
