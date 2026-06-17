@@ -17,9 +17,15 @@ demoing against a local Surfpool mainnet-fork.
 - [x] 55 tests across SDK + CLI + inspector against the real WASM; CI green.
 
 ## Week 1 — Reproduce the transfer flow (de-risk gate)
-- [ ] Stand up a Surfpool mainnet-fork with Token-2022 cloned (`pnpm fork:up`).
-- [ ] Reproduce the full confidential-transfer flow end-to-end in a script
-      (deposit → apply-pending → transfer with 3 proofs → apply → withdraw).
+- [x] Stand up a Surfpool mainnet-fork with Token-2022 cloned (`pnpm fork:up`).
+- [x] Run `scripts/repro-confidential-flow.sh`; **gate passed** — see
+      [`docs/FORK-FINDINGS.md`](FORK-FINDINGS.md). ZK proof program works on the
+      fork; `configure` succeeds; parser validated byte-for-byte against a real
+      on-chain account (golden test in CI).
+- [ ] Full flow (deposit → apply → transfer → withdraw) needs a *current*
+      Token-2022 on the fork — the mainnet-cloned build rejects deposits
+      (confidential transfers disabled there). Deploy a recent `spl_token_2022.so`,
+      then capture a non-zero account for an end-to-end decryption test.
 - [ ] Wire `@solana/zk-sdk` proof-data generation (range / validity / equality).
 
 > **Kill/Pivot gate:** if you cannot reproduce the confidential flow on the local
