@@ -14,7 +14,7 @@ demoing against a local Surfpool mainnet-fork.
 - [x] High-level `decodeConfidentialAccount` + `ConfidentialKit.inspect` (RPC).
 - [x] CLI `inspect` + `decrypt` (solves token-2022#145).
 - [x] Web ciphertext inspector (Vite + React, in-browser WASM) — `apps/inspector`.
-- [x] 55 tests across SDK + CLI + inspector against the real WASM; CI green.
+- [x] 60 tests across SDK + CLI + inspector against the real WASM; CI green.
 
 ## Week 1 — Reproduce the transfer flow (de-risk gate)
 - [x] Stand up a Surfpool mainnet-fork with Token-2022 cloned (`pnpm fork:up`).
@@ -22,11 +22,14 @@ demoing against a local Surfpool mainnet-fork.
       [`docs/FORK-FINDINGS.md`](FORK-FINDINGS.md). ZK proof program works on the
       fork; `configure` succeeds; parser validated byte-for-byte against a real
       on-chain account (golden test in CI).
-- [ ] Full flow (deposit → apply → transfer → withdraw) needs a *current*
-      Token-2022 on the fork — the mainnet-cloned build rejects deposits
-      (confidential transfers disabled there). Deploy a recent `spl_token_2022.so`,
-      then capture a non-zero account for an end-to-end decryption test.
-- [ ] Wire `@solana/zk-sdk` proof-data generation (range / validity / equality).
+- [x] **Full flow reproduced.** Built a current Token-2022 (v11.0.0) with
+      `cargo-build-sbf`, overrode the canonical program on the fork via
+      `surfnet_setAccount`, and ran `deposit` + `apply-pending` successfully.
+      Captured a real **non-zero** account; the SDK decrypts its available
+      balance (600 tokens) using owner keys derived from the wallet signature —
+      validated offline in CI (`decode.real-nonzero.test.ts`).
+- [ ] Wire `@solana/zk-sdk` proof-data generation so the SDK can *build* the
+      transfer/withdraw proofs itself (currently exercised via the spl-token CLI).
 
 > **Kill/Pivot gate:** if you cannot reproduce the confidential flow on the local
 > fork by end of Week 1, pivot to the runner-up: Light Protocol ZK-compression

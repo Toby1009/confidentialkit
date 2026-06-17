@@ -13,10 +13,14 @@ generation), is **compliance-first** (auditor keys / selective disclosure), and 
 ## Status
 
 🟢 **`0.0.x` — read path implemented and tested.** Account parsing, balance
-decryption, key derivation, the CLI (`inspect`/`decrypt`) and an RPC client are
-working and covered by tests (44 across SDK + CLI, exercising the real
-`@solana/zk-sdk` WASM). On-chain transfer construction is gated on the proof
-program re-enabling — see [`docs/ROADMAP.md`](docs/ROADMAP.md).
+decryption, key derivation, the CLI (`inspect`/`decrypt`), an RPC client and a
+web inspector are working and covered by 60 tests across SDK + CLI + inspector,
+exercising the real `@solana/zk-sdk` WASM. The full confidential flow
+(deposit → apply → decrypt) has been reproduced end-to-end on a surfpool fork
+with a current Token-2022, and the SDK's decryption is validated against a real
+non-zero on-chain account — see [`docs/FORK-FINDINGS.md`](docs/FORK-FINDINGS.md).
+On-chain transfer *construction* (proof generation) is the remaining SDK work —
+see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 > ⚠️ **Liveness note.** Solana's native ZK ElGamal Proof program
 > (`ZkE1Gama1Proof11111111111111111111111111111`) has been **disabled on mainnet

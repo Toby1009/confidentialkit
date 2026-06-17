@@ -1,63 +1,68 @@
 #!/usr/bin/env bash
 #
-# Week-1 de-risk gate: stand up a surfpool mainnet-fork and exercise the
-# Token-2022 confidential-transfer flow with the real spl-token CLI, then dump a
-# real confidential account so the SDK parser can be validated against on-chain
-# program output (see packages/sdk/src/state/real-account.test.ts).
+# Week-1 de-risk gate, fully reproduced: stand up a surfpool mainnet-fork, deploy
+# a CURRENT Token-2022 onto the canonical program id (the mainnet-cloned build
+# has confidential transfers disabled), run the full confidential flow
+# (configure -> deposit -> apply), and dump a real non-zero account that the SDK
+# can decrypt. See docs/FORK-FINDINGS.md.
 #
-# Empirical findings on this environment (Agave 4.0.1 / spl-token-cli 5.5.0 /
-# surfpool 1.0.0), recorded in docs/FORK-FINDINGS.md:
-#   - The ZK ElGamal proof program IS executable on a surfpool fork.
-#   - `configure-confidential-transfer-account` SUCCEEDS (submits a real
-#     pubkey-validity proof to the ZK program).
-#   - `deposit-confidential-tokens` / `apply-pending-balance` are REJECTED with
-#     InvalidInstructionData, because the Token-2022 program cloned from mainnet
-#     is the post-2025-06-11 build with confidential transfers disabled.
-#     => To run the full flow, target a current Token-2022 (see the doc).
-#
-# Requires: solana CLI + spl-token on PATH, surfpool on PATH.
+# Requires: solana CLI + spl-token + cargo-build-sbf + git + surfpool on PATH.
 set -euo pipefail
 
 WORKDIR="${WORKDIR:-.surfpool-run}"
 RPC="${RPC:-http://127.0.0.1:8899}"
 CONFIG="$WORKDIR/solana-config.yml"
+BUILD="${BUILD:-$HOME/.confidentialkit-build}"
+TOKEN_2022="TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
 mkdir -p "$WORKDIR"
 
 sol() { solana -C "$CONFIG" "$@"; }
 tok() { spl-token -C "$CONFIG" "$@"; }
 
-echo "→ Using isolated solana config at $CONFIG (your global config is untouched)"
+# 1. Build a current Token-2022 .so (skip if already built).
+SO="$BUILD/token-2022/target/deploy/spl_token_2022.so"
+if [ ! -f "$SO" ]; then
+  echo "→ Cloning + building current Token-2022 (cargo-build-sbf)…"
+  mkdir -p "$BUILD"
+  [ -d "$BUILD/token-2022" ] || git clone --depth 1 https://github.com/solana-program/token-2022.git "$BUILD/token-2022"
+  ( cd "$BUILD/token-2022/program" && cargo-build-sbf )
+fi
+echo "→ Token-2022 .so: $SO ($(wc -c < "$SO") bytes)"
+
+# 2. Configure an isolated solana config + funded payer (global config untouched).
 solana-keygen new -o "$WORKDIR/payer.json" --no-bip39-passphrase --force --silent >/dev/null
 sol config set --url "$RPC" --keypair "$WORKDIR/payer.json" >/dev/null
 sol airdrop 100 >/dev/null
 echo "→ Funded payer: $(solana-keygen pubkey "$WORKDIR/payer.json")"
 
+# 3. Overwrite the canonical Token-2022 (BPFLoader2 stores the ELF in the account)
+#    with our current build via surfpool's cheat RPC.
+echo "→ Overriding $TOKEN_2022 with the current build (surfnet_setAccount)…"
+node -e '
+const fs = require("fs");
+const so = fs.readFileSync(process.argv[1]);
+(async () => {
+  const body = { jsonrpc:"2.0", id:1, method:"surfnet_setAccount", params:[
+    process.argv[2],
+    { data: so.toString("hex"), owner: "BPFLoader2111111111111111111111111111111111", executable: true },
+  ]};
+  const r = await fetch(process.argv[3], { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (j.error) { console.error(j.error); process.exit(1); }
+})();
+' "$SO" "$TOKEN_2022" "$RPC"
+
+# 4. Full confidential flow on the canonical program.
 solana-keygen new -o "$WORKDIR/mint.json" --no-bip39-passphrase --force --silent >/dev/null
 MINT=$(solana-keygen pubkey "$WORKDIR/mint.json")
-echo "→ Creating confidential mint $MINT"
 tok create-token --program-2022 --enable-confidential-transfers auto "$WORKDIR/mint.json" >/dev/null
-
 ACCT=$(tok create-account "$MINT" | awk '/Creating account/ {print $3}')
-echo "→ Created token account $ACCT"
 tok configure-confidential-transfer-account --address "$ACCT" >/dev/null
-echo "→ Configured confidential transfers (ZK pubkey-validity proof accepted)"
-
 tok mint "$MINT" 1000 >/dev/null
-echo "→ Minted 1000 public tokens"
+echo "→ deposit 600 confidential…";   tok deposit-confidential-tokens "$MINT" 600 >/dev/null && echo "  ✓ deposited"
+echo "→ apply pending balance…";       tok apply-pending-balance --address "$ACCT" >/dev/null && echo "  ✓ applied"
 
-echo "→ Attempting confidential deposit (expected to fail on a mainnet-cloned Token-2022):"
-if tok deposit-confidential-tokens "$MINT" 600 >/dev/null 2>&1; then
-  echo "  ✓ deposit succeeded — full flow is reproducible here!"
-else
-  echo "  ✗ deposit rejected (InvalidInstructionData) — confidential transfers disabled"
-  echo "    in the cloned mainnet Token-2022. This is the documented liveness wall."
-fi
-
-echo "→ Dumping real configured account to $WORKDIR/real-account.base64"
-curl -s "$RPC" -X POST -H 'Content-Type: application/json' \
-  -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getAccountInfo\",\"params\":[\"$ACCT\",{\"encoding\":\"base64\"}]}" \
-  | node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(0,"utf8")).result.value.data[0])' \
-  > "$WORKDIR/real-account.base64"
-
-echo "→ Validating with the ConfidentialKit CLI:"
+# 5. Dump + validate with the ConfidentialKit CLI.
+echo "→ Real confidential account $ACCT:"
 node packages/cli/dist/index.js inspect "$ACCT" --url "$RPC"
+echo "→ Done. The owner can now decrypt the available balance (600 tokens) with their AES key."

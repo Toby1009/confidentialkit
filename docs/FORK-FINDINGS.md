@@ -10,9 +10,10 @@ surfpool mainnet-fork (`surfpool start --network mainnet`). Reproduce with
 | --- | --- |
 | ZK ElGamal proof program present + executable | ✅ yes (`Executable: true`, owner `NativeLoader`) |
 | `configure-confidential-transfer-account` (submits a pubkey-validity proof) | ✅ **succeeds** |
-| `deposit-confidential-tokens` | ❌ `InvalidInstructionData` (program build, not a feature gate — also fails with `surfpool --feature enable-all-features`) |
-| `apply-pending-balance` | ❌ `InvalidInstructionData` |
+| `deposit` / `apply` on the **mainnet-cloned** program | ❌ `InvalidInstructionData` (program build, not a feature gate — also fails with `--feature enable-all-features`) |
+| `deposit` / `apply` after deploying a **current** Token-2022 | ✅ **succeeds** (see below) |
 | **SDK parser vs. real on-chain account layout** | ✅ **byte-accurate** |
+| **SDK decrypts a real non-zero balance** | ✅ `600` tokens recovered |
 
 ## What this means
 
@@ -45,22 +46,32 @@ Deploy a current `spl_token_2022.so` to the fork (overriding the cloned mainnet
 one), then re-run the deposit → apply → transfer → withdraw flow and capture a
 **non-zero** confidential account to validate the decryption path end-to-end.
 
-## Open next step (full flow → non-zero account)
+## ✅ Full flow reproduced with a current Token-2022
 
-The remaining work is to make `deposit` succeed so a **non-zero** confidential
-balance exists, then validate the decryption path against it end-to-end (derive
-the owner AES key from a wallet signature, decrypt the real
-`decryptable_available_balance`, assert it equals the deposited amount).
+The deposit wall was purely the cloned mainnet program build. Resolved by
+deploying a **current** Token-2022 onto the fork:
 
-The blocker is purely the program build, not our SDK: deploy a **current**
-`spl_token_2022.so` onto the fork at `TokenzQ…` (e.g. `solana program dump` from a
-cluster carrying a newer build, or build from `solana-program/token-2022`), then
-re-run `scripts/repro-confidential-flow.sh`.
+1. Built `spl_token_2022.so` from `solana-program/token-2022` (v11.0.0) with
+   `cargo-build-sbf` (~15s; platform-tools v1.53).
+2. Overwrote the canonical program account (it is under the non-upgradeable
+   `BPFLoader2`, which stores the ELF directly) using surfpool's cheat RPC:
+   `surfnet_setAccount("TokenzQ…", { data: <hex ELF>, owner: BPFLoader2…, executable: true })`.
+3. Re-ran the flow on the **canonical** `--program-2022`:
 
-> A sandboxed agent follow-up could not attempt this — its environment blocked
-> outbound network and local port binding (`Operation not permitted`), so it
-> could neither fetch a program artifact nor start a validator. This is an
-> agent-sandbox limitation, **not** a finding about the fork: on the real host,
-> surfpool boots fine, `configure` succeeds, and the parser is validated against
-> a live account (above). The step just needs a host with network + a current
-> Token-2022 artifact.
+| Step | Result on the upgraded fork |
+| --- | --- |
+| `deposit-confidential-tokens 600` | ✅ succeeds |
+| `apply-pending-balance` | ✅ succeeds |
+| SDK decrypts the real available balance | ✅ `600_000_000_000` base units (600 @ 9 decimals) |
+
+The decryption path is now validated end-to-end against real program output:
+the owner key was derived from the payer's ed25519 signature exactly as
+spl-token-cli does (sign `b"ElGamalSecretKey"` / `b"AeKey"` with an **empty**
+public_seed, then `fromSignature` — an owner-wide key, not per-account), and our
+`decryptAeCiphertext` recovered the deposited amount. Locked into CI as an
+offline golden fixture: `packages/sdk/src/__fixtures__/real-nonzero-account.ts`
++ `packages/sdk/src/decode.real-nonzero.test.ts`.
+
+> Reproduce with `scripts/repro-confidential-flow.sh` (it builds + overrides the
+> program, then runs the full flow). This proves the thesis directly: **build and
+> demo against a fork today, mainnet-ready the moment the program re-enables.**
