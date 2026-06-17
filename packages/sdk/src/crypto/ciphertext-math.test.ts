@@ -72,7 +72,9 @@ describe("groupedHandleCiphertext", () => {
     expect(await decryptElGamalCiphertext(groupedHandleCiphertext(grouped, 2), aud.secret().toBytes())).toBe(77n);
   });
 
-  it("rejects an out-of-range handle index", () => {
-    expect(() => groupedHandleCiphertext(new Uint8Array(128), 3)).toThrow(InvalidInputError);
+  it("rejects an out-of-range or non-integer handle index", () => {
+    for (const bad of [-1, 3, 1.5, Number.NaN]) {
+      expect(() => groupedHandleCiphertext(new Uint8Array(128), bad)).toThrow(InvalidInputError);
+    }
   });
 });

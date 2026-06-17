@@ -46,8 +46,8 @@ export function encodeConfidentialWithdrawInstruction(
   if (params.amount < 0n || params.amount > MAX_U64) {
     throw new InvalidInputError("amount", "must be in [0, 2^64)");
   }
-  if (params.decimals < 0 || params.decimals > 255) {
-    throw new InvalidInputError("decimals", "must be a u8");
+  if (!Number.isInteger(params.decimals) || params.decimals < 0 || params.decimals > 255) {
+    throw new InvalidInputError("decimals", "must be an integer u8");
   }
   assertByteLength(
     params.newDecryptableAvailableBalance,

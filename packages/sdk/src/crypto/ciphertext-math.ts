@@ -68,7 +68,7 @@ const GROUPED_3_HANDLES_LEN = 128; // commitment ‖ 3 decrypt handles
  */
 export function groupedHandleCiphertext(grouped: Uint8Array, handleIndex: number): Uint8Array {
   assertByteLength(grouped, GROUPED_3_HANDLES_LEN, "grouped 3-handle ciphertext");
-  if (handleIndex < 0 || handleIndex > 2) {
+  if (!Number.isInteger(handleIndex) || handleIndex < 0 || handleIndex > 2) {
     throw new InvalidInputError("handleIndex", "must be 0 (source), 1 (destination), or 2 (auditor)");
   }
   const handleOffset = 32 + 32 * handleIndex;

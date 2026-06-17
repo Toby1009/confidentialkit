@@ -22,7 +22,9 @@ export interface CreateAccountParams {
 export function encodeCreateAccountInstruction(params: CreateAccountParams): InstructionDescriptor {
   const ownerBytes = base58ToBytes(params.owner);
   if (ownerBytes.length !== 32) throw new InvalidInputError("owner", "must be a 32-byte address");
-  if (params.space < 0) throw new InvalidInputError("space", "must be non-negative");
+  if (!Number.isSafeInteger(params.space) || params.space < 0) {
+    throw new InvalidInputError("space", "must be a non-negative integer");
+  }
 
   const data = new Uint8Array(4 + 8 + 8 + 32);
   // data[0..4] = instruction index 0 (CreateAccount), left as zero.

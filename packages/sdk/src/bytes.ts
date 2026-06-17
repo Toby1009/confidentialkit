@@ -91,6 +91,9 @@ export function writeU64LE(data: Uint8Array, offset: number, value: bigint): voi
   if (value < 0n || value > (1n << 64n) - 1n) {
     throw new InvalidInputError("u64 value", "must be in [0, 2^64)");
   }
+  if (!Number.isInteger(offset) || offset < 0 || offset + 8 > data.length) {
+    throw new InvalidInputError("u64 write", "offset out of bounds");
+  }
   let v = value;
   for (let i = 0; i < 8; i++) {
     data[offset + i] = Number(v & 0xffn);
