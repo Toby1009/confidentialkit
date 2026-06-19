@@ -29,7 +29,7 @@ Token-2022 + ZK-program instructions, orchestrate the multi-transaction plan, an
 submit via `@solana/kit`. CLI + browser inspector included. **Compliance-first**:
 auditor keys / selective disclosure — confidentiality, not anonymity.
 
-**Traction — it already works (≈50 words).** Implemented and tested: 99 tests
+**Traction — it already works (≈50 words).** Implemented and tested: 101 tests
 across 4 packages, CI green. The hard parts are validated **byte-for-byte against
 real `spl-token` transactions** on a mainnet fork: the account parser, decryption
 of a real non-zero balance, the Withdraw and Transfer instruction encoders, and
@@ -72,7 +72,7 @@ is **no dominant incumbent SDK** in this niche. ConfidentialKit fills it.
 
 ### What's built (current status)
 
-A pnpm monorepo, MIT-licensed, 99 tests, CI green:
+A pnpm monorepo, MIT-licensed, 101 tests, CI green:
 
 | Package | What it does | Status |
 | --- | --- | --- |

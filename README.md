@@ -32,22 +32,41 @@ homomorphic ciphertext arithmetic, each checkable with `verifyProof`), instructi
 encoding (ZK-program verify/context-state/close + the Token-2022 confidential
 `Withdraw`, validated byte-for-byte against a real on-chain instruction), the CLI
 (`inspect`/`decrypt`), an RPC client and a web inspector are working and covered
-by 98 tests across SDK + CLI + inspector + kit, exercising the real `@solana/zk-sdk`
-WASM. The full confidential flow
-(deposit → apply → decrypt) has been reproduced end-to-end on a surfpool fork
-with a current Token-2022, and the SDK's decryption is validated against a real
-non-zero on-chain account — see [`docs/FORK-FINDINGS.md`](docs/FORK-FINDINGS.md).
-On-chain transfer *construction* (proof generation) is the remaining SDK work —
-see [`docs/ROADMAP.md`](docs/ROADMAP.md).
+by 101 tests across SDK + CLI + inspector + kit, exercising the real `@solana/zk-sdk`
+WASM. The full confidential flow — configure → deposit → apply → **confidential
+transfer** → decrypt — has been reproduced **end-to-end on public devnet**
+(agave 4.1.0-rc.1) with the version-matched `spl-token-cli` 5.6.1, and the SDK
+decrypts the resulting live, non-zero on-chain accounts — including the **hidden
+amounts of real confidential transfers** — straight from RPC. See
+[`docs/FORK-FINDINGS.md`](docs/FORK-FINDINGS.md) and [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
-> ⚠️ **Liveness note.** Solana's native ZK ElGamal Proof program
-> (`ZkE1Gama1Proof11111111111111111111111111111`) has been **disabled on mainnet
-> and devnet since 2025-06-19** (the "Phantom Challenge" Fiat-Shamir transcript
-> bug). Confidential transfers are therefore not executable on live clusters as of
-> mid-2026. ConfidentialKit is designed to **develop and demo against a local
-> Surfpool mainnet-fork** with Token-2022 cloned, and flips to devnet/mainnet
-> behind a flag the moment the program re-enables (tracking
-> [`solana-program/token-2022#657`](https://github.com/solana-program/token-2022/issues/657)).
+> ⚠️ **Liveness note (updated 2026-06).** Solana's native ZK ElGamal Proof program
+> (`ZkE1Gama1Proof11111111111111111111111111111`) is **live and verifying on
+> devnet** — we ran the full confidential flow (configure → deposit → transfer →
+> apply) there. The real gate is a **client ↔ cluster version match**: the ZK
+> *proof transcript* and the *key-derivation KDF* (SHA3-512 → HKDF-SHA512,
+> [zk-elgamal-proof#35](https://github.com/solana-program/zk-elgamal-proof/issues/35))
+> are version-pinned, so tooling must match the cluster's agave — `spl-token-cli`
+> 5.6.1 ↔ devnet 4.1.x works; 5.5.0 is rejected (`AlgebraicRelation`). `@solana/zk-sdk`
+> 0.4.2 (our browser WASM) is currently behind that line, so the SDK **parses and
+> decrypts live accounts** but cannot yet **generate accepted proofs** in-browser.
+> Mainnet's deployed Token-2022 still has confidential transfers gated (tracking
+> [`token-2022#657`](https://github.com/solana-program/token-2022/issues/657)). The
+> full version matrix is in [`docs/FORK-FINDINGS.md`](docs/FORK-FINDINGS.md).
+
+## Live demo & on-chain proof
+
+- **Interactive demo** ([`apps/site`](apps/site)) — the SDK running live in your
+  browser: **reveal a real confidential transfer** from devnet and decrypt the
+  hidden amount, encrypt/decrypt your own number, and build a full transfer plan.
+  Lightweight Vite app, one-click Vercel deploy (`vercel.json` included).
+  <!-- live demo URL: add your Vercel link here -->
+- **Verify it yourself on devnet** — everything below is real, version-matched
+  on-chain state, decryptable with this SDK:
+  - Live confidential account (600 tokens): [`736aw6bF…vW3Jo`](https://explorer.solana.com/address/736aw6bF5qp8NzANrckEiPJZ36Ci1jKkPrQJvm5vW3Jo?cluster=devnet)
+  - Confidential-transfer mint: [`HfgBdtQ9…WB4q`](https://explorer.solana.com/address/HfgBdtQ9u3FGDEFaxf9KS2hcCwR5pLBfh6y1dwTSWB4q?cluster=devnet)
+  - A real confidential transfer — amount hidden on-chain, decrypted by the SDK: [recipient `GDFyNfj6…`](https://explorer.solana.com/address/GDFyNfj6ZbBrXWzsZuFvBmab6V8Y3geYZrkdhnzJ9z9M?cluster=devnet) · [transfer tx](https://explorer.solana.com/tx/41zf4Sk1mANE92UoiHL4jkiBfeNgDDsLzq3fVPQPrGubfNPb7i5db1bCdSe6i2iSB6y48FQMrGbJoJLfXWMsgfjr?cluster=devnet)
+  - Reproduce: [`scripts/devnet-confidential-live.sh`](scripts/devnet-confidential-live.sh) · [`scripts/devnet-confidential-transfers.sh`](scripts/devnet-confidential-transfers.sh)
 
 ## What's in the box
 

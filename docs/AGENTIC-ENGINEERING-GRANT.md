@@ -16,7 +16,10 @@ ConfidentialKit — an open-source TypeScript toolkit that makes Solana's Token-
 keys from wallet signatures, generate the full ZK proof set
 (configure/close/withdraw/transfer), encode the Token-2022 + ZK-program
 instructions, orchestrate the multi-transaction plan, and submit via `@solana/kit`.
-**4 packages, 99 passing tests, CI green.**
+**4 packages, 101 passing tests, CI green** — plus the full confidential flow
+(configure → deposit → **confidential transfer** → apply → decrypt) reproduced
+**end-to-end on public devnet**, with the SDK decrypting the resulting live
+on-chain accounts.
 
 ## How it was built (the agentic engineering story)
 
@@ -36,6 +39,12 @@ instructions, orchestrate the multi-transaction plan, and submit via `@solana/ki
   surfaced and documented a real interop bug: `@solana/zk-sdk` (WASM) proofs
   self-verify but are rejected by the on-chain ZK program due to a Fiat-Shamir
   transcript version skew — and shipped a one-command compatibility probe for it.
+- **Breakthrough on public devnet.** The agent then confirmed the gate on real
+  devnet (the official `spl-token-cli` 5.5.0 is rejected too), identified the
+  version-matched `spl-token-cli` 5.6.1, and landed the full confidential flow —
+  including real **confidential transfers** — on-chain. It root-caused a second
+  skew (key derivation migrated SHA3-512 → HKDF-SHA512), wrote a Rust helper to
+  reproduce the on-chain keys exactly, and the SDK decrypted the live balances.
 
 ## Evidence it actually works (not slideware)
 
@@ -46,6 +55,9 @@ instructions, orchestrate the multi-transaction plan, and submit via `@solana/ki
   `spl-token` transactions on a fork.
 - Multi-transaction submission lands and confirms end-to-end on the fork.
 - Every generated ZK proof passes the same WASM verifier the chain runs.
+- **On public devnet:** real confidential transfers landed (configure → transfer
+  → apply), and the SDK decrypted each recipient's *hidden* amount live from RPC —
+  verifiable on Solana Explorer (links below).
 
 (Full technical validation log: `docs/FORK-FINDINGS.md`.)
 
@@ -59,6 +71,10 @@ infrastructure — and a public good the confidential-balances ecosystem will ne
 ## Links
 
 - Code: https://github.com/Toby1009/confidentialkit
+- Interactive demo (reveal + decrypt a real confidential transfer): `apps/site` <!-- add Vercel URL -->
+- On-chain proof (devnet, Explorer):
+  - account: https://explorer.solana.com/address/736aw6bF5qp8NzANrckEiPJZ36Ci1jKkPrQJvm5vW3Jo?cluster=devnet
+  - confidential transfer tx: https://explorer.solana.com/tx/41zf4Sk1mANE92UoiHL4jkiBfeNgDDsLzq3fVPQPrGubfNPb7i5db1bCdSe6i2iSB6y48FQMrGbJoJLfXWMsgfjr?cluster=devnet
 - Validation findings: `docs/FORK-FINDINGS.md`
 - Roadmap: `docs/ROADMAP.md`
 - End-to-end demo: `examples/confidential-stablecoin/demo.ts`

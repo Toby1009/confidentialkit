@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { POOL, revealTransfer, type RevealedTransfer } from "./faucetPool.js";
+import { useRef, useState } from "react";
+import { loadPool, revealTransfer, type PoolEntry, type RevealedTransfer } from "./faucetPool.js";
 
 export function Faucet() {
-  const [seen, setSeen] = useState<number[]>([]);
+  const seen = useRef<Set<number>>(new Set());
+  const [count, setCount] = useState(0);
+  const [poolSize, setPoolSize] = useState<number | null>(null);
   const [reveal, setReveal] = useState<RevealedTransfer | null>(null);
   const [step, setStep] = useState<"hidden" | "decrypted" | "wrong">("hidden");
   const [busy, setBusy] = useState(false);
@@ -14,13 +16,20 @@ export function Faucet() {
     setReveal(null);
     setStep("hidden");
     try {
-      const poolSeen = seen.length >= POOL.length ? [] : seen;
-      const choices = POOL.map((_, i) => i).filter((i) => !poolSeen.includes(i));
+      const pool = await loadPool();
+      setPoolSize(pool.length);
+      if (pool.length === 0) throw new Error("no transfers available");
+      // Non-exclusive, cycling: reset once every entry has been shown.
+      if (seen.current.size >= pool.length) seen.current.clear();
+      const choices = pool
+        .map((_, i): number => i)
+        .filter((i) => !seen.current.has(i));
       const idx = choices[Math.floor(Math.random() * choices.length)] ?? 0;
-      const entry = POOL[idx];
+      const entry: PoolEntry | undefined = pool[idx];
       if (!entry) throw new Error("no transfers available");
-      setSeen([...poolSeen, idx]);
+      seen.current.add(idx);
       setReveal(await revealTransfer(entry));
+      setCount((c) => c + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -38,9 +47,16 @@ export function Faucet() {
         the recipient's key decrypts it. The SDK does it live in your browser.
       </p>
 
-      <button className="primary" style={{ marginLeft: 0 }} onClick={next} disabled={busy}>
-        {busy ? "Fetching…" : reveal ? "Reveal another →" : "Reveal a confidential transfer →"}
-      </button>
+      <div className="row">
+        <button className="primary" style={{ marginLeft: 0 }} onClick={next} disabled={busy}>
+          {busy ? "Fetching…" : reveal ? "Reveal another →" : "Reveal a confidential transfer →"}
+        </button>
+        {poolSize !== null && (
+          <span className="dim small">
+            revealed {count} · pool of {poolSize.toLocaleString()} real transfers
+          </span>
+        )}
+      </div>
 
       {error && <p className="reveal bad">⚠ {error}</p>}
 
