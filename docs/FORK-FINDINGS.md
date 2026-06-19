@@ -177,3 +177,17 @@ KDF/transcript. Reproduce with [`scripts/devnet-confidential-live.sh`](../script
 This four-row table *is* the product thesis: most of the SDK surface is stable, but
 two narrow layers are version-pinned and silently break — exactly the footgun
 ConfidentialKit makes visible and navigable.
+
+### Real confidential *transfers*, decrypted by the SDK (demo faucet)
+
+We then went past a deposit and exercised the headline feature: **confidential
+transfers**. With 5.6.1, the faucet account sent hidden amounts to a batch of fresh
+recipients (`configure` → `transfer --confidential` → `apply` each). Every transfer
+landed on devnet, and for each the SDK recovered the **hidden transferred amount**
+from the recipient's on-chain ciphertext using the recipient's HKDF-derived key —
+10 / 10. On Explorer the amounts are pure ciphertext; the SDK reveals them.
+
+This pool drives the demo site's faucet ("reveal a real confidential transfer →
+decrypt the hidden amount"), and one entry is locked into CI
+(`packages/sdk/src/decode.devnet-transfer.test.ts`). Reproduce with
+[`scripts/devnet-confidential-transfers.sh`](../scripts/devnet-confidential-transfers.sh).
