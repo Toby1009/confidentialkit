@@ -2,10 +2,50 @@ import * as zk from "@solana/zk-sdk/bundler";
 import {
   buildConfidentialTransferPlan,
   bytesToBase58,
+  bytesToHex,
+  decryptAeCiphertext,
   generateTransferProofs,
   groupedHandleCiphertext,
   verifyProof,
 } from "@confidentialkit/sdk";
+
+export interface EncryptedBalance {
+  readonly amount: bigint;
+  /** The on-chain confidential-balance ciphertext (AES decryptable-available-balance). */
+  readonly ciphertext: Uint8Array;
+  readonly ciphertextHex: string;
+  readonly ownerKey: Uint8Array;
+  readonly wrongKey: Uint8Array;
+}
+
+/** Encrypt an amount into a Token-2022 confidential-balance ciphertext (client-side). */
+export function encryptBalance(amount: bigint): EncryptedBalance {
+  const owner = zk.AeKey.fromSeed(crypto.getRandomValues(new Uint8Array(16)));
+  const wrong = zk.AeKey.fromSeed(crypto.getRandomValues(new Uint8Array(16)));
+  const ciphertext = owner.encrypt(amount).toBytes();
+  const result: EncryptedBalance = {
+    amount,
+    ciphertext,
+    ciphertextHex: bytesToHex(ciphertext),
+    ownerKey: owner.toBytes(),
+    wrongKey: wrong.toBytes(),
+  };
+  owner.free();
+  wrong.free();
+  return result;
+}
+
+/** Decrypt the ciphertext; returns `null` when the wrong key is used. */
+export async function decryptBalance(
+  enc: EncryptedBalance,
+  useWrongKey: boolean,
+): Promise<bigint | null> {
+  try {
+    return await decryptAeCiphertext(enc.ciphertext, useWrongKey ? enc.wrongKey : enc.ownerKey);
+  } catch {
+    return null; // wrong key → DecryptionError
+  }
+}
 
 export interface DemoStep {
   readonly label: string;

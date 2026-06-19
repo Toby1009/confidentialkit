@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EncryptDecrypt } from "./EncryptDecrypt.js";
 import { runDemo, type DemoResult } from "./pipeline.js";
 
 export function Demo() {
@@ -24,10 +25,15 @@ export function Demo() {
   return (
     <section>
       <p className="lede">
-        Run the entire confidential-transfer construction <strong>live in your browser</strong> —
+        Everything on this page runs <strong>live in your browser</strong> — no backend, no network
+        — over the real <code>@confidentialkit/sdk</code> + <code>@solana/zk-sdk</code> WASM.
+      </p>
+
+      <EncryptDecrypt />
+
+      <h3 className="section-h">2 · Build a confidential transfer</h3>
+      <p className="dim small" style={{ marginTop: "-0.4rem" }}>
         keys → ZK proofs → verification → recipient &amp; auditor decryption → transaction plan.
-        No backend, no network: everything runs client-side over the real
-        <code>@confidentialkit/sdk</code> + <code>@solana/zk-sdk</code> WASM.
       </p>
 
       <div className="card controls">

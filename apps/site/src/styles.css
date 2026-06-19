@@ -59,6 +59,30 @@ button.primary {
 }
 button.primary:disabled { opacity: 0.6; cursor: default; }
 
+.section-h { margin: 1.6rem 0 0.5rem; font-size: 1.05rem; }
+
+.flow { display: flex; flex-direction: column; gap: 0.9rem; }
+.flow-step { display: flex; flex-direction: column; gap: 0.4rem; }
+.flow-cap { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.flow .row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+.flow input {
+  width: 9rem; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); border-radius: 8px; padding: 0.5rem 0.6rem; font: inherit;
+}
+.flow .row button:not(.primary) {
+  background: #181430; border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 0.5rem 0.9rem; cursor: pointer; font: inherit;
+}
+.cipher {
+  display: block; background: #0d1117; border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.7rem 0.8rem; font-family: ui-monospace, monospace; font-size: 0.82rem;
+  word-break: break-all; color: #ffb86b;
+}
+.reveal { font-size: 1.3rem; font-weight: 700; margin: 0.4rem 0 0; }
+.reveal.ok { color: var(--ok); }
+.reveal.bad { color: var(--danger); }
+.reveal .dim { font-size: 0.85rem; font-weight: 400; }
+
 .steps { list-style: none; margin: 0; padding: 0; }
 .steps li { display: flex; gap: 0.7rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); }
 .steps li:last-child { border-bottom: 0; }
