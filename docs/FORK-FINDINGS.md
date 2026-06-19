@@ -109,3 +109,71 @@ version-matched to the program) is accepted; the WASM build is the outlier here.
 - Mitigations to track: pin/track the `@solana/zk-sdk` ↔ agave version matrix,
   and (once the program re-enables on a known version) validate end-to-end against
   it. Until then, proof generation is validated offline against the WASM verifier.
+
+## Live on **public devnet** (2026-06-17) — the version matrix, confirmed end-to-end
+
+Everything above was on a surfpool fork. We then reproduced the gate **and broke
+through it** on the real **devnet** (`getVersion` → agave **4.1.0-rc.1**), with a
+throwaway funded keypair — no fork, no cheat RPC.
+
+| Step | `spl-token-cli` **5.5.0** (zk-sdk ~0.x, our local) | `spl-token-cli` **5.6.1** (zk-sdk 7.0.x) |
+| --- | --- | --- |
+| create confidential mint | ✅ | ✅ |
+| `configure-confidential-transfer-account` | ❌ `SigmaProof(PubkeyValidity, AlgebraicRelation)` | ✅ **accepted** |
+| `deposit-confidential-tokens 600` | ❌ blocked (configure never landed) | ✅ |
+| `apply-pending-balance` | — | ✅ |
+
+**This nails the thesis to the wall:** devnet's ZK ElGamal program is *live and
+verifying* — it rejected the **official** Solana CLI 5.5.0's proof (not our code,
+not our WASM) and accepted 5.6.1's. The liveness gate is purely a **client↔cluster
+proof-version match**: `spl-token-cli 5.6.1` (built on `solana-zk-sdk 7.0.x`) is
+version-aligned to devnet's agave 4.1-rc; 5.5.0 is not. Same failure family we saw
+for our WASM on the fork, now confirmed on a public cluster with canonical tooling.
+
+### The resulting live account (publicly verifiable)
+
+| | |
+| --- | --- |
+| Mint (`confidentialTransferMint`) | `HfgBdtQ9u3FGDEFaxf9KS2hcCwR5pLBfh6y1dwTSWB4q` |
+| Account (`confidentialTransferAccount`, non-zero) | `736aw6bF5qp8NzANrckEiPJZ36Ci1jKkPrQJvm5vW3Jo` |
+| configure / deposit / apply tx | `23Nz3ZRv…1xXj` / `55rQnzYg…7yRK` / `44kPTD9b…6T53B` |
+
+Explorer: `https://explorer.solana.com/address/736aw6bF5qp8NzANrckEiPJZ36Ci1jKkPrQJvm5vW3Jo?cluster=devnet`
+
+### SDK validated against the live account
+
+Fetched the account straight from devnet RPC and ran `decodeConfidentialAccount`:
+the parse is **byte-correct** against the live on-chain layout — `mint`,
+`approved: true`, and the ElGamal pubkey (`ecf07215…98f92e`) all match
+`spl-token account-info`. Parsing and the decryption math are **version-stable**.
+
+**One more skew, now in key derivation — root-caused.** The on-chain ElGamal
+pubkey matched *neither* our WASM (`@solana/zk-sdk` 0.4.2) owner-wide nor
+per-account `signerMessage` derivation. Reading the 7.0.1 source explains why: the
+confidential-key KDF **migrated from a non-standard SHA3-512 scheme (now
+`*_legacy`) to HKDF-SHA512** (zk-elgamal-proof #35). 0.4.2 still does the legacy
+KDF; 5.6.1 does the new one — so `signer → key` is version-skewed independently of
+the proof transcript.
+
+**Resolved.** Re-deriving with the new KDF (`derive_confidential_keys`, **empty**
+public seed = owner-wide) reproduced the on-chain ElGamal pubkey **exactly**
+(`ecf07215…98f92e`). Handing the resulting 16-byte AES key to the SDK as raw bytes
+(`decryptAeCiphertext` is derivation-agnostic), `decodeConfidentialAccount` then
+decrypted the **live devnet balance end-to-end: `600000000000` base units = 600
+tokens**, and a wrong key was rejected. So the SDK's parse **and** decrypt are
+validated against a real, public, non-zero on-chain account — the only missing
+piece for current devnet is an `@solana/zk-sdk` build that tracks the 7.0.x
+KDF/transcript. Reproduce with [`scripts/devnet-confidential-live.sh`](../scripts/devnet-confidential-live.sh).
+
+### The version matrix, distilled
+
+| Layer | What skews | Stable across versions? |
+| --- | --- | --- |
+| Account **parsing** (TLV offsets/lengths) | nothing observed | ✅ yes |
+| **Decrypt math** (AES-GCM-SIV, ElGamal) | nothing observed | ✅ yes |
+| **Key derivation** (`signer → key`) | SHA3-512 → HKDF-SHA512 (#35) | ❌ version-pinned |
+| **Proof transcript** (Fiat-Shamir) | challenge differs per agave | ❌ version-pinned |
+
+This four-row table *is* the product thesis: most of the SDK surface is stable, but
+two narrow layers are version-pinned and silently break — exactly the footgun
+ConfidentialKit makes visible and navigable.

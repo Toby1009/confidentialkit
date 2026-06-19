@@ -23,10 +23,10 @@ export function EncryptDecrypt() {
 
   return (
     <div className="card">
-      <h3>1 · Encrypt &amp; decrypt a balance</h3>
+      <h3>2 · Encrypt &amp; decrypt your own number</h3>
       <p className="dim small">
-        Token-2022 stores balances as ciphertexts. Without the owner's key, an on-chain amount is
-        just opaque bytes — that's the "confidential" in confidential balances.
+        Same SDK, your input. Token-2022 stores balances as ciphertexts — without the owner's key,
+        an on-chain amount is just opaque bytes. That's the "confidential" in confidential balances.
       </p>
 
       <div className="flow">

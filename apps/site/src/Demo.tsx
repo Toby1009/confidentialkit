@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { EncryptDecrypt } from "./EncryptDecrypt.js";
+import { LiveDevnet } from "./LiveDevnet.js";
 import { runDemo, type DemoResult } from "./pipeline.js";
 
 export function Demo() {
@@ -25,13 +26,16 @@ export function Demo() {
   return (
     <section>
       <p className="lede">
-        Everything on this page runs <strong>live in your browser</strong> — no backend, no network
-        — over the real <code>@confidentialkit/sdk</code> + <code>@solana/zk-sdk</code> WASM.
+        All cryptography runs <strong>live in your browser</strong> over the real{" "}
+        <code>@confidentialkit/sdk</code> + <code>@solana/zk-sdk</code> WASM — no backend. Section 1
+        reads a real account from devnet RPC; sections 2–3 are fully client-side.
       </p>
+
+      <LiveDevnet />
 
       <EncryptDecrypt />
 
-      <h3 className="section-h">2 · Build a confidential transfer</h3>
+      <h3 className="section-h">3 · Build a confidential transfer</h3>
       <p className="dim small" style={{ marginTop: "-0.4rem" }}>
         keys → ZK proofs → verification → recipient &amp; auditor decryption → transaction plan.
       </p>
